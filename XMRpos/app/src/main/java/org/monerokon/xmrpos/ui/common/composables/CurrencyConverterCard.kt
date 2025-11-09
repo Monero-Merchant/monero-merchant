@@ -13,11 +13,14 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import java.math.BigDecimal
 import java.math.RoundingMode
 
@@ -28,22 +31,23 @@ fun CurrencyConverterCard(
     exchangeRate: Double?,
     paymentValue: String,
     targetXMRvalue: BigDecimal? = null,
-    elevation: CardElevation = CardDefaults.cardElevation(6.dp),
-    color: CardColors = CardDefaults.elevatedCardColors()
+    color: Color = MaterialTheme.colorScheme.primary
 ) {
-    ElevatedCard(
-        elevation = elevation,
-        colors = color,
+    Surface(
+        color = color,
+        shape = MaterialTheme.shapes.medium,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(16.dp).fillMaxWidth()
+            modifier = Modifier.padding(22.dp).fillMaxWidth()
         ) {
-            Column {
+            Column (
+                verticalArrangement = Arrangement.SpaceBetween,
+            ){
                 if (currency != "") {
-                    Text(text = currency, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(text = currency, fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary)
                 } else {
                     LinearProgressIndicator(
                         modifier = Modifier.width(48.dp).padding(vertical = 7.5.dp)
@@ -53,8 +57,8 @@ fun CurrencyConverterCard(
                 if (exchangeRate != null) {
                     Text(
                         text = "1 XMR = $exchangeRate $currency",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.4f)
                     )
                 } else {
                     LinearProgressIndicator(
@@ -64,7 +68,8 @@ fun CurrencyConverterCard(
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column (
-                horizontalAlignment = Alignment.End
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.SpaceBetween,
             ) {
                 if (exchangeRate != null && exchangeRate != 0.0) {
                     val rate = BigDecimal.valueOf(exchangeRate)
@@ -74,8 +79,8 @@ fun CurrencyConverterCard(
 
                     if (xmrAmount != null) {
                         val fiatAmount = xmrAmount.multiply(rate).setScale(3, RoundingMode.HALF_UP)
-                        Text(text = "${fiatAmount.toPlainString()} $currency", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                        Text(text = "${xmrAmount.setScale(5, RoundingMode.HALF_UP).toPlainString()} XMR", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                        Text(text = "${fiatAmount.toPlainString()} $currency", fontSize = 16.sp, color = MaterialTheme.colorScheme.secondary)
+                        Text(text = "${xmrAmount.setScale(5, RoundingMode.HALF_UP).toPlainString()} XMR", fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary)
                     } else {
                         CircularProgressIndicator(
                             modifier = Modifier.size(24.dp)

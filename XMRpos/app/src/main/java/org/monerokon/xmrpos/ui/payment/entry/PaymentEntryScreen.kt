@@ -2,6 +2,10 @@
 package org.monerokon.xmrpos.ui.payment.entry
 
 import CurrencyConverterCard
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.text.KeyboardOptions
@@ -9,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.Done
 import androidx.compose.material.icons.rounded.Settings
@@ -16,6 +21,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.KeyboardType
@@ -67,56 +73,57 @@ fun PaymentEntryScreen(
     resetErrorMessage: () -> Unit,
 ) {
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-        Column (
-            verticalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.padding(innerPadding).fillMaxHeight()
+        Box(
+            modifier = Modifier.padding(start = 24.dp, top = innerPadding.calculateTopPadding() + 24.dp, end = 24.dp, bottom = innerPadding.calculateBottomPadding() + 24.dp )
         ) {
-            Row(
-                horizontalArrangement = Arrangement.End,
+            Column (
+                verticalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .padding(innerPadding)
+                    .fillMaxHeight()
             ) {
-                IconButton(
-                    onClick = {onSettingsClick()},
-                ) {
-                    Icon(imageVector = Icons.Rounded.Settings, contentDescription = "Settings")
+                Column (
+                    verticalArrangement = Arrangement.Top,
+                ){
+                    Row(
+                        horizontalArrangement = Arrangement.End,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                    ) {
+                        FilledIconButton(
+                            onClick = {onSettingsClick()},
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                contentColor = MaterialTheme.colorScheme.onPrimary,
+                            ),
+                                    modifier = Modifier.
+                                    then(Modifier.size(40.dp)),
+                        ) {
+                            Icon(imageVector = Icons.Outlined.Settings, contentDescription = "Settings", modifier = Modifier.size(20.dp))
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(30.dp))
+                    CurrencyConverterCard(
+                        currency = primaryFiatCurrency,
+                        exchangeRate = exchangeRate,
+                        paymentValue = paymentValue,
+                    )
                 }
-            }
-            Box(
-                modifier = Modifier.padding(horizontal = 44.dp).padding(bottom = 16.dp),
-            ) {
-                CurrencyConverterCard(
-                    currency = primaryFiatCurrency,
-                    exchangeRate = exchangeRate,
-                    paymentValue = paymentValue,
-                )
-            }
-            Column(
-                verticalArrangement = Arrangement.Bottom,
-                modifier = Modifier
-                    .padding(horizontal = 28.dp)
-                    .wrapContentHeight()
-            ) {
-
-                Spacer(modifier = Modifier.height(8.dp))
-                PaymentValue(value = paymentValue, currency = primaryFiatCurrency)
-                Spacer(modifier = Modifier.height(8.dp))
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 32.dp))
-                Spacer(modifier = Modifier.height(8.dp))
-                Box (
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-                ) { PaymentEntryButtons(
-                    onDigitClick = onDigitClick,
-                ) }
-                Spacer(modifier = Modifier.height(24.dp))
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 32.dp))
-                Spacer(modifier = Modifier.height(24.dp))
-                PaymentEntryControlButtons(
-                    onBackspaceClick = onBackspaceClick,
-                    onClearClick = onClearClick,
-                    onSubmitClick = onSubmitClick
-                )
-                Spacer(modifier = Modifier.height(24.dp))
+                Column(
+                    verticalArrangement = Arrangement.Bottom,
+                ) {
+                    PaymentValue(value = paymentValue, currency = primaryFiatCurrency)
+                    Spacer(modifier = Modifier.height(10.dp))
+                    PaymentEntryButtons(
+                        onDigitClick = onDigitClick,
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    PaymentEntryControlButtons(
+                        onBackspaceClick = onBackspaceClick,
+                        onClearClick = onClearClick,
+                        onSubmitClick = onSubmitClick
+                    )
+                }
             }
         }
         when {
@@ -204,28 +211,27 @@ fun OpenSettingsDialog(
 fun PaymentValue(value: String, currency: String) {
     Surface(
         shape = MaterialTheme.shapes.medium,
-        tonalElevation = 32.dp,
+        tonalElevation = 0.dp,
         modifier = Modifier
             .fillMaxWidth()
-            .defaultMinSize(minHeight = 180.dp)
+
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 20.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(22.dp)
+
         ) {
             Text(
                 text = currency,
-                style = MaterialTheme.typography.headlineSmall.copy(fontSize = 24.sp),
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(end = 16.dp)
+                fontSize = 16.sp,
+                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.4f),
             )
             Text(
                 text = value,
-                style = MaterialTheme.typography.headlineMedium.copy(fontSize = 36.sp),
+                fontSize = 32.sp,
+                color = MaterialTheme.colorScheme.onPrimary,
                 textAlign = TextAlign.End,
-                modifier = Modifier.weight(1f)
             )
         }
     }
@@ -256,7 +262,7 @@ fun PaymentEntryButtons(
                 modifier = Modifier.weight(1f)
             )
         }
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(10.dp))
         Row {
             PaymentEntryButton(
                 text = "4",
@@ -276,7 +282,7 @@ fun PaymentEntryButtons(
                 modifier = Modifier.weight(1f)
             )
         }
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(10.dp))
         Row {
             PaymentEntryButton(
                 text = "7",
@@ -296,7 +302,7 @@ fun PaymentEntryButtons(
                 modifier = Modifier.weight(1f)
             )
         }
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(10.dp))
         Row (
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -318,9 +324,10 @@ fun PaymentEntryButtons(
 @Composable
 fun ButtonSpacing() {
     Spacer(
-        modifier = Modifier.padding(horizontal = 10.dp)
+        modifier = Modifier.padding(horizontal = 5.dp)
     )
 }
+
 
 @Composable
 fun PaymentEntryButton(
@@ -328,16 +335,44 @@ fun PaymentEntryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    OutlinedButton(
-        onClick = onClick,
-        border = ButtonDefaults.outlinedButtonBorder().copy(width = 1.dp),
-        shape = MaterialTheme.shapes.extraLarge,
-        colors = ButtonDefaults.outlinedButtonColors().copy(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
-        modifier = modifier.height(72.dp)
+    // 1. Create an InteractionSource to track the pressed state.
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    // 2. Animate the elevation for a smoother transition.
+    val elevation by animateDpAsState(
+        targetValue = if (isPressed) 8.dp else 0.dp, // Shadow appears on press
+        label = "elevationAnimation"
+    )
+
+    Surface(
+        modifier = modifier
+            .height(64.dp)
+            // 3. Apply the animated shadow.
+            .shadow(
+                elevation = elevation,
+                shape = MaterialTheme.shapes.medium,
+                ambientColor = MaterialTheme.colorScheme.secondary,
+                spotColor = MaterialTheme.colorScheme.secondary,
+            )
+            // 4. Use the clickable modifier.
+            .clickable(
+                interactionSource = interactionSource,
+                // Pass null to disable the default ripple effect.
+                indication = null,
+                onClick = onClick
+            ),
+        // Use standard button colors and shape for consistency.
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
     ) {
-        Text(text = text, style = MaterialTheme.typography.titleMedium)
+        // Center the text within the Surface.
+        Box(
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text = text, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onPrimary) // titleLarge is often better for large buttons
+        }
     }
 }
 
@@ -350,25 +385,31 @@ fun PaymentEntryControlButtons(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally)
+        horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)
     ) {
         PaymentEntryControlButton(
             icon = Icons.Rounded.Clear,
+            iconColor = MaterialTheme.colorScheme.onPrimaryContainer,
             contentDescription = "Clear",
             onClick = onClearClick,
-            containerColor = Color(0xFFFF5555)
+            containerColor = Color(0xFFFFFFFF),
+            modifier = Modifier.weight(1f)
         )
         PaymentEntryControlButton(
             icon = Icons.AutoMirrored.Rounded.ArrowBack,
+            iconColor = Color(0xFFFFFFFF),
             contentDescription = "Back",
             onClick = onBackspaceClick,
-            containerColor = Color(0xFFF1FA8C)
+            containerColor = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f)
         )
         PaymentEntryControlButton(
             icon = Icons.Rounded.Done,
+            iconColor = Color(0xFFFFFFFF),
             contentDescription = "Done",
             onClick = onSubmitClick,
-            containerColor = Color(0xFF50FA7B)
+            containerColor = MaterialTheme.colorScheme.secondary,
+            modifier = Modifier.weight(1f)
         )
     }
 }
@@ -377,6 +418,7 @@ fun PaymentEntryControlButtons(
 @Composable
 fun PaymentEntryControlButton(
     icon: ImageVector,
+    iconColor: Color,
     contentDescription: String?,
     containerColor: Color,
     onClick: () -> Unit,
@@ -387,9 +429,9 @@ fun PaymentEntryControlButton(
         colors = ButtonDefaults.buttonColors().copy(
             containerColor = containerColor
         ),
-        modifier = modifier.height(72.dp).padding(horizontal = 16.dp)
+        modifier = modifier.height(64.dp)
     ) {
-        Icon(imageVector = icon, contentDescription = contentDescription)
+        Icon(imageVector = icon, contentDescription = contentDescription, tint = iconColor, modifier = Modifier.size(28.dp))
     }
 }
 

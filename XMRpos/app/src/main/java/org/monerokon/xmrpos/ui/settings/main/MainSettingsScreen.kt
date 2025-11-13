@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import org.monerokon.xmrpos.R
+import org.monerokon.xmrpos.ui.common.composables.StyledTopAppBar
 
 
 @Composable
@@ -64,27 +65,9 @@ fun MainSettingsScreen(
     }
     Scaffold(
         topBar = {
-            TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                ),
-                navigationIcon = {
-                    IconButton(onClick = {onBackClick()}) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.arrow_back_24px),
-                            contentDescription = "Go back to previous screen"
-                        )
-                    }
-                },
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Settings", style = MaterialTheme.typography.labelSmall)
-                    }
-                }
+            StyledTopAppBar(
+                text = "Settings",
+                onBackClick = onBackClick
             )
         },
     ) { innerPadding ->

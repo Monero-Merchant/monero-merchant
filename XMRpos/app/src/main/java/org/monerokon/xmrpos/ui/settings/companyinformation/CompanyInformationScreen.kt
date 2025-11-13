@@ -17,7 +17,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import org.monerokon.xmrpos.R
+import org.monerokon.xmrpos.ui.common.composables.CustomOutlinedTextField
 import org.monerokon.xmrpos.ui.common.composables.DisplayImageFromFile
+import org.monerokon.xmrpos.ui.common.composables.StyledTopAppBar
 import java.io.File
 
 @Composable
@@ -66,21 +68,9 @@ fun CompanyInformationScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                navigationIcon = {
-                    IconButton(onClick = {onBackClick()}) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.arrow_back_24px),
-                            contentDescription = "Go back to previous screen"
-                        )
-                    }
-                },
-                title = {
-                    Text("Company Information")
-                }
+            StyledTopAppBar(
+                text = "Company information",
+                onBackClick = onBackClick
             )
         },
     ) { innerPadding ->
@@ -95,7 +85,7 @@ fun CompanyInformationScreen(
             ) {
                 FilledTonalIconButton (
                     onClick = { if (companyLogo == null) {pickMedia.launch(PickVisualMediaRequest(PickVisualMedia.ImageOnly))} else {deleteLogo()} },
-                    modifier = Modifier.size(100.dp)
+                    modifier = Modifier.size(98.dp)
                 ) {
                     if (companyLogo != null) {
                         DisplayImageFromFile(companyLogo)
@@ -112,35 +102,36 @@ fun CompanyInformationScreen(
                         )
                     }
                 }
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(20.dp))
                 Column {
-                    Text("Upload logo", style = MaterialTheme.typography.titleLarge)
-                    Text("This logo will be shown on the printed receipts", style = MaterialTheme.typography.bodyMedium)
+                    Text("Upload logo", style = MaterialTheme.typography.titleMedium)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("This logo will be shown on the printed receipts", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f))
                 }
             }
-            Spacer(modifier = Modifier.height(24.dp))
-            TextField(
+            Spacer(modifier = Modifier.height(40.dp))
+            CustomOutlinedTextField(
                 value = companyName,
                 onValueChange = {updateCompanyName(it)},
-                label = { Text("Company name") },
-                supportingText = { Text("Shown on the receipts") },
-                modifier = Modifier.fillMaxWidth()
+                label = "Company name",
+                supportingText = "Shown on the receipts",
+                modifier = Modifier.fillMaxWidth(),
             )
-            Spacer(modifier = Modifier.height(24.dp))
-            TextField(
+            Spacer(modifier = Modifier.height(40.dp))
+            CustomOutlinedTextField(
                 value = contactInformation,
                 onValueChange = {updateContactInformation(it)},
-                label = { Text("Contact information") },
-                supportingText = { Text("Shown on the receipts") },
-                modifier = Modifier.fillMaxWidth()
+                label = "Contact information",
+                supportingText = "Shown on the receipts",
+                modifier = Modifier.fillMaxWidth(),
             )
-            Spacer(modifier = Modifier.height(24.dp))
-            TextField(
+            Spacer(modifier = Modifier.height(40.dp))
+            CustomOutlinedTextField(
                 value = receiptFooter,
                 onValueChange = {updateReceiptFooter(it)},
-                label = { Text("Receipt footer") },
-                supportingText = { Text("Shown at the end of the receipt") },
-                modifier = Modifier.fillMaxWidth()
+                label = "Receipt footer",
+                supportingText = "Shown at the end of the receipt",
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }

@@ -76,8 +76,9 @@ fun CompanyInformationScreen(
     ) { innerPadding ->
         Column (
             verticalArrangement = Arrangement.Top,
-            modifier = Modifier.padding(innerPadding).padding(horizontal = 32.dp, vertical = 24.dp)
+            modifier = Modifier.padding(innerPadding).padding(horizontal = 24.dp)
         ) {
+            Spacer(modifier = Modifier.height(24.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,

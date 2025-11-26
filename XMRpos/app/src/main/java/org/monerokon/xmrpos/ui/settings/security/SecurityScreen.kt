@@ -15,6 +15,9 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import org.monerokon.xmrpos.R
+import org.monerokon.xmrpos.ui.common.composables.CustomOutlinedTextField
+import org.monerokon.xmrpos.ui.common.composables.CustomSwitch
+import org.monerokon.xmrpos.ui.common.composables.StyledTopAppBar
 
 @Composable
 fun SecurityScreenRoot(viewModel: SecurityViewModel, navController: NavHostController) {
@@ -47,85 +50,59 @@ fun SecurityScreen(
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                navigationIcon = {
-                    IconButton(onClick = {onBackClick()}) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.arrow_back_24px),
-                            contentDescription = "Go back to previous screen"
-                        )
-                    }
-                },
-                title = {
-                    Text("Security")
-                }
-            )
+            StyledTopAppBar(text = "Security", onBackClick = onBackClick)
         },
     ) { innerPadding ->
         Column (
             verticalArrangement = Arrangement.Top,
             modifier = Modifier
                 .padding(innerPadding)
-                .padding(horizontal = 32.dp, vertical = 24.dp)
+                .padding(horizontal = 24.dp)
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
            Row (
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
            ) {
-                Text("Require PIN code on app start", style = MaterialTheme.typography.labelLarge)
-                Switch(
+                Text("Require PIN code on app start", style = MaterialTheme.typography.labelSmall)
+               CustomSwitch(
                     checked = requirePinCodeOnAppStart,
                     onCheckedChange = { updateRequirePinCodeOnAppStart(it) }
                 )
             }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(10.dp))
             Row (
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ){
-                Text("Require PIN code to open settings", style = MaterialTheme.typography.labelLarge)
-                Switch(
+                Text("Require PIN code to open settings", style = MaterialTheme.typography.labelSmall)
+                CustomSwitch(
                     checked = requirePinCodeOpenSettings,
                     onCheckedChange = { updateRequirePinCodeOpenSettings(it) }
                 )
            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Row {
-                Column (
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("PIN code on app start", style = MaterialTheme.typography.labelLarge)
-                    TextField(
-                        enabled = requirePinCodeOnAppStart,
-                        value = pinCodeOnAppStart,
-                        onValueChange = { updatePinCodeOnAppStart(it) },
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        placeholder = { Text("Enter PIN code") }
-                    )
-                }
-                Spacer(modifier = Modifier.width(42.dp))
-                Column (
-                    modifier = Modifier.weight(1f)
-                ){
-                    Text("PIN code to open settings", style = MaterialTheme.typography.labelLarge)
-                    // only number input
-                    TextField(
-                        enabled = requirePinCodeOpenSettings,
-                        value = pinCodeOpenSettings,
-                        onValueChange = { updatePinCodeOpenSettings(it) },
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        placeholder = { Text("Enter PIN code") }
-                    )
-                }
-            }
+            Spacer(modifier = Modifier.height(50.dp))
+            CustomOutlinedTextField(
+                enabled = requirePinCodeOnAppStart,
+                label = "PIN code on app start",
+                value = pinCodeOnAppStart,
+                onValueChange = { updatePinCodeOnAppStart(it) },
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                placeholder = "Enter PIN code"
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            CustomOutlinedTextField(
+                enabled = requirePinCodeOpenSettings,
+                label = "PIN code to open settings",
+                value = pinCodeOpenSettings,
+                onValueChange = { updatePinCodeOpenSettings(it) },
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                placeholder = "Enter PIN code"
+            )
         }}
 }
 

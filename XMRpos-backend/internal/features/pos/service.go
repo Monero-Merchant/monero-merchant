@@ -183,6 +183,14 @@ func (s *PosService) ListTransactionsByPos(ctx context.Context, vendorID uint, p
 	return result, nil
 }
 
+func (s *PosService) GetPosAccountBalance(ctx context.Context, vendorID uint, posID uint) (int64, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	return s.repo.GetBalanceByPosID(ctx, vendorID, posID)
+}
+
 func (s *PosService) ExportConfirmedTransactionsCSV(ctx context.Context, vendorID uint, posID uint) (string, error) {
 	if ctx == nil {
 		ctx = context.Background()

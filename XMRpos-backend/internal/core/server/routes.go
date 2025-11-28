@@ -110,6 +110,7 @@ func NewRouter(ctx context.Context, cfg *config.Config, db *gorm.DB, rpcClient *
 		r.Get("/vendor/balance", vendorHandler.GetAccountBalance)
 
 		// POS routes
+		r.Get("/pos/balance", posHandler.GetPosBalance)
 		r.Post("/pos/create-transaction", posHandler.CreateTransaction)
 		r.Get("/pos/transaction/{id}", posHandler.GetTransaction)
 		r.Get("/pos/transactions", posHandler.ListTransactions)

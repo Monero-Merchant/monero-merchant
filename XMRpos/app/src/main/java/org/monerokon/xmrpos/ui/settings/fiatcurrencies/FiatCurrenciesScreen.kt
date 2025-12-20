@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,6 +24,8 @@ import androidx.navigation.NavHostController
 import org.monerokon.xmrpos.ui.settings.companyinformation.CompanyInformationViewModel
 import kotlin.math.exp
 import org.monerokon.xmrpos.R
+import org.monerokon.xmrpos.ui.common.composables.InputTile
+import org.monerokon.xmrpos.ui.common.composables.StyledTopAppBar
 
 @Composable
 fun FiatCurrenciesScreenRoot(viewModel: FiatCurrenciesViewModel, navController: NavHostController) {
@@ -53,25 +56,11 @@ fun FiatCurrenciesScreen(
     moveReferenceFiatCurrencyUp: (Int) -> Unit,
     moveReferenceFiatCurrencyDown: (Int) -> Unit,
 ) {
-    var primaryFiatSelectExpanded by remember { mutableStateOf(false) }
-    val primaryFiatSelectTextFieldState = rememberTextFieldState(fiatOptions[0])
     Scaffold(
         topBar = {
-            TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                navigationIcon = {
-                    IconButton(onClick = {onBackClick()}) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.arrow_back_24px),
-                            contentDescription = "Go back to previous screen"
-                        )
-                    }
-                },
-                title = {
-                    Text("Fiat currencies")
-                }
+            StyledTopAppBar(
+                text = "Fiat currencies",
+                onBackClick = onBackClick
             )
         },
     ) { innerPadding ->
@@ -81,16 +70,22 @@ fun FiatCurrenciesScreen(
                 .padding(innerPadding)
                 .padding(horizontal = 32.dp, vertical = 24.dp)
         ) {
-            Text("Primary fiat currency", style = MaterialTheme.typography.titleLarge)
+            Text("Primary fiat currency", style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(8.dp))
-            Text("This is the currency that will be entered to take an order. It will also be displayed on the receipt along with the exchange rate.", style = MaterialTheme.typography.bodyMedium)
-            Spacer(modifier = Modifier.height(24.dp))
-            CurrencySelector(primaryFiatCurrency, "Primary fiat currency", fiatOptions, onCurrencySelected = {updatePrimaryFiatCurrency(it)})
-            Spacer(modifier = Modifier.height(24.dp))
+            Text("This is the currency that will be entered to take an order. It will also be displayed on the receipt along with the exchange rate.", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
+            Spacer(modifier = Modifier.height(20.dp))
+            InputTile.DropdownInput(
+                value = primaryFiatCurrency,
+                items = fiatOptions,
+                onItemSelected = {updatePrimaryFiatCurrency(it)},
+                prefix = "Primary fiat currency",
+                padding = PaddingValues(16.dp)
+            )
+            Spacer(modifier = Modifier.height(50.dp))
             Text("Reference fiat currencies", style = MaterialTheme.typography.titleLarge)
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             ReferenceFiatCurrenciesCard(referenceFiatCurrencies, removeReferenceFiatCurrency, moveReferenceFiatCurrencyUp, moveReferenceFiatCurrencyDown)
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(24.dp))
             ReferenceCurrencySelector(fiatOptions, addReferenceFiatCurrency)
     }}
 }
@@ -103,26 +98,31 @@ fun ReferenceFiatCurrenciesCard(
     moveReferenceFiatCurrencyUp: (Int) -> Unit,
     moveReferenceFiatCurrencyDown: (Int) -> Unit,
 ) {
-    OutlinedCard(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
-        border = BorderStroke(1.dp, Color(0xff52443c)),
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shape = MaterialTheme.shapes.medium,
         modifier = Modifier
             .fillMaxWidth()
-            .height(220.dp)
+            .heightIn(min = 72.dp, max = 300.dp)
     ) {
-        Column(
+        LazyColumn(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxWidth(),
+            contentPadding = PaddingValues(all = 16.dp)
         ) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-            ) {
-                items(referenceFiatCurrencies.size) { index ->
-                    ReferenceFiatCurrencyRow(referenceFiatCurrencies[index], onRemoveClick = {removeReferenceFiatCurrency(index)}, onMoveReferenceFiatCurrencyUpClick = {moveReferenceFiatCurrencyUp(index)}, onMoveReferenceFiatCurrencyDownClick = {moveReferenceFiatCurrencyDown(index)})
+            items(referenceFiatCurrencies.size) { index ->
+                ReferenceFiatCurrencyRow(
+                    fiatCurrency = referenceFiatCurrencies[index],
+                    onRemoveClick = { removeReferenceFiatCurrency(index) },
+                    onMoveReferenceFiatCurrencyUpClick = { moveReferenceFiatCurrencyUp(index) },
+                    onMoveReferenceFiatCurrencyDownClick = { moveReferenceFiatCurrencyDown(index) }
+                )
+
+                if (index < referenceFiatCurrencies.size - 1) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                    )
                 }
             }
         }
@@ -141,9 +141,10 @@ fun ReferenceFiatCurrencyRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier
             .fillMaxWidth()
+            .height(40.dp)
             .padding(4.dp)
     ) {
-        Text(fiatCurrency)
+        Text(fiatCurrency, style = MaterialTheme.typography.labelSmall)
         Row (
             horizontalArrangement = Arrangement.End,
         ) {
@@ -159,52 +160,20 @@ fun ReferenceFiatCurrencyRow(
                     contentDescription = "Remove reference fiat currency",
                 )
             }
-            IconButton(onClick = { onRemoveClick() }) {
-                Icon(
-                    painter = painterResource(id = R.drawable.delete_24px),
-                    contentDescription = "Remove reference fiat currency",
-                )
+            Row {
+                Spacer(modifier = Modifier.width(8.dp))
+                IconButton(onClick = { onRemoveClick() }) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.delete_24px),
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
+                        contentDescription = "Remove reference fiat currency",
+                    )
+                }
             }
         }
     }
 }
 
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun CurrencySelector(value: String, label: String, currencies: List<String>, onCurrencySelected: (String) -> Unit, modifier: Modifier = Modifier) {
-    var expanded by remember { mutableStateOf(false) }
-
-
-    Column {
-        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = {expanded = !expanded}, modifier = modifier) {
-            TextField(
-                modifier = Modifier.menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true).fillMaxWidth(),
-                value = value,
-                enabled = true,
-                label = { Text(label) },
-                onValueChange = {},
-                readOnly = true,
-                trailingIcon = {
-                    ExposedDropdownMenuDefaults.TrailingIcon(
-                        expanded = expanded,
-                    )
-                }
-            )
-            ExposedDropdownMenu(expanded = expanded, onDismissRequest = {expanded = false}) {
-                currencies.forEach { currency ->
-                    DropdownMenuItem(
-                        text = { Text(currency) },
-                        onClick = {
-                            expanded = false
-                            onCurrencySelected(currency)
-                        },
-                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
-                    )
-            }
-        }
-    }
-}}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -215,29 +184,39 @@ fun ReferenceCurrencySelector(fiatOptions: List<String>, addReferenceFiatCurrenc
     Column {
         ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = {expanded = !expanded}, modifier = modifier) {
             FilledTonalButton(
-                modifier = Modifier.menuAnchor(
-                    type = MenuAnchorType.PrimaryNotEditable,
-                    enabled = true
-                ).fillMaxWidth(),
+                colors = ButtonDefaults.filledTonalButtonColors().copy(
+                    containerColor = MaterialTheme.colorScheme.secondary
+                ),
+                modifier = Modifier
+                    .menuAnchor(
+                        type = ExposedDropdownMenuAnchorType.PrimaryNotEditable,
+                        enabled = true
+                    )
+                    .fillMaxWidth(),
                 onClick = {},
             ) {
-                Text("Add reference fiat currency")
+                Text("Add reference fiat currency", style = MaterialTheme.typography.labelSmall)
             }
-            ExposedDropdownMenu(expanded = expanded, onDismissRequest = {expanded = false}) {
-                fiatOptions.forEach { currency ->
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = {expanded = false},
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                shape = MaterialTheme.shapes.small
+            ) {
+                fiatOptions.forEach { option ->
                     DropdownMenuItem(
-                        text = { Text(currency) },
+                        text = { Text(option, style = MaterialTheme.typography.labelSmall) },
                         onClick = {
                             expanded = false
-                            addReferenceFiatCurrency(currency)
+                            addReferenceFiatCurrency(option)
                         },
                         contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                     )
                 }
             }
         }
-    }}
-
+    }
+}
 
 
 

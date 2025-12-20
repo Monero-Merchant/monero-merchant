@@ -212,6 +212,7 @@ object InputTile {
         onItemSelected: (String) -> Unit,
         modifier: Modifier = Modifier,
         prefix: String?,
+        padding: PaddingValues = PaddingValues(10.dp),
     ) {
         var expanded by remember { mutableStateOf(false) }
 
@@ -221,7 +222,7 @@ object InputTile {
                 color = MaterialTheme.colorScheme.surfaceVariant,
                 shape = MaterialTheme.shapes.medium,
                 content = {
-                    Box(modifier = Modifier.padding(10.dp)) {
+                    Box(modifier = Modifier.padding(padding)) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween,

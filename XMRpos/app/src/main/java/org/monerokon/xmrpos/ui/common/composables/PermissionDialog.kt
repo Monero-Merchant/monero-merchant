@@ -17,46 +17,30 @@ fun PermissionDialog(
     onDismiss: () -> Unit,
     onOkClick: () -> Unit,
     onGoToAppSettingsClick: () -> Unit,
-    modifier: Modifier = Modifier
 ) {
-    AlertDialog(
+    CustomAlertDialog(
         icon = {
             Icon(painter = painterResource(id = R.drawable.info_24px), tint = MaterialTheme.colorScheme.primary, contentDescription = "Info")
         },
-        title = {
-            Text(text = "Permission required")
-        },
-        text = {
-            Text(
-                text = permissionTextProvider.getDescription(
-                    isPermanentlyDeclined = isPermanentlyDeclined
-                )
-            )
-        },
+        dialogTitle = "Permission required",
+        dialogText = permissionTextProvider.getDescription(
+            isPermanentlyDeclined = isPermanentlyDeclined
+        ),
         onDismissRequest = {
             onDismiss()
         },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    if (isPermanentlyDeclined) {
-                        onGoToAppSettingsClick()
-                    } else {
-                        onOkClick()
-                    }
-                }
-            ) {
-                Text(
-                    text = if(isPermanentlyDeclined) {
-                        "Grant permission"
-                    } else {
-                        "OK"
-                    },
-                )
+        onConfirmation = {
+            if (isPermanentlyDeclined) {
+                onGoToAppSettingsClick()
+            } else {
+                onOkClick()
             }
         },
-        dismissButton = null,
-        modifier = modifier
+        confirmButtonText = if(isPermanentlyDeclined) {
+            "Grant permission"
+        } else {
+            "OK"
+        },
     )
 }
 

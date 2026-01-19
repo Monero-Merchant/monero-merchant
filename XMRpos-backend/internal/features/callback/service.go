@@ -2,6 +2,7 @@ package callback
 
 import (
 	"context"
+	"log"
 	"sync"
 
 	"net/http"
@@ -25,6 +26,40 @@ type CallbackService struct {
 
 func NewCallbackService(repo CallbackRepository, cfg *config.Config, moneroPay *moneropay.MoneroPayAPIClient) *CallbackService {
 	return &CallbackService{repo: repo, config: cfg, moneroPay: moneroPay}
+}
+
+type LwsHookRequest struct {
+	Event         string      `json:"event"`
+	PaymentID     string      `json:"payment_id"`
+	Token         string      `json:"token"`
+	Confirmations int64       `json:"confirmations"`
+	EventID       string      `json:"event_id"`
+	ID            string      `json:"id"`
+	Amount        int64       `json:"amount"`
+	Height        *int64      `json:"height,omitempty"`
+	TxHash        string      `json:"tx_hash"`
+	Timestamp     *time.Time  `json:"timestamp,omitempty"`
+	TxInfo        *LwsTxInfo  `json:"tx_info,omitempty"`
+	Extra         interface{} `json:"extra,omitempty"`
+}
+
+type LwsTxInfo struct {
+	ID struct {
+		High int64 `json:"high"`
+		Low  int64 `json:"low"`
+	} `json:"id"`
+	Block        *int64 `json:"block"`
+	Index        *int64 `json:"index"`
+	Amount       int64  `json:"amount"`
+	Timestamp    int64  `json:"timestamp"`
+	TxHash       string `json:"tx_hash"`
+	TxPrefixHash string `json:"tx_prefix_hash"`
+	TxPublic     string `json:"tx_public"`
+	RctMask      string `json:"rct_mask"`
+	PaymentID    string `json:"payment_id"`
+	UnlockTime   int64  `json:"unlock_time"`
+	MixinCount   int64  `json:"mixin_count"`
+	Coinbase     bool   `json:"coinbase"`
 }
 
 func (s *CallbackService) StartConfirmationChecker(ctx context.Context, interval time.Duration) {
@@ -207,6 +242,96 @@ func (s *CallbackService) HandleCallback(ctx context.Context, jwtToken string, c
 	}
 
 	httpErr = s.processTransaction(ctx, claims.TransactionID, callback.ToReceiveAddressResponse())
+	if httpErr != nil {
+		return httpErr
+	}
+	return nil
+}
+
+func (s *CallbackService) HandleLwsHook(ctx context.Context, jwtToken string, payload LwsHookRequest) (httpErr *models.HTTPError) {
+	if ctx == nil {
+		return models.NewHTTPError(http.StatusInternalServerError, "context required")
+	}
+
+	eventTimestamp := time.Now().UTC()
+	amount := payload.Amount
+	txHash := payload.TxHash
+	if payload.TxInfo != nil {
+		if amount == 0 {
+			amount = payload.TxInfo.Amount
+		}
+		if txHash == "" {
+			txHash = payload.TxInfo.TxHash
+		}
+		if payload.TxInfo.Timestamp > 0 {
+			eventTimestamp = time.Unix(payload.TxInfo.Timestamp, 0).UTC()
+		}
+	}
+	if payload.Timestamp != nil && !payload.Timestamp.IsZero() {
+		eventTimestamp = *payload.Timestamp
+	}
+
+	if amount == 0 || txHash == "" {
+		log.Printf("lws-hook: missing amount/tx_hash (amount=%d, tx_hash=%s)", amount, txHash)
+		return models.NewHTTPError(http.StatusBadRequest, "amount and tx_hash are required")
+	}
+
+	if time.Since(eventTimestamp) > time.Minute {
+		log.Printf("lws-hook: stale payload ts=%s now=%s", eventTimestamp, time.Now().UTC())
+		return models.NewHTTPError(http.StatusUnauthorized, "Stale LWS payload")
+	}
+
+	if jwtToken != s.config.JWTLwsToken {
+		log.Printf("lws-hook: invalid token")
+		return models.NewHTTPError(http.StatusUnauthorized, "Invalid token")
+	}
+
+	candidates, err := s.repo.FindRecentPendingTransactionsByAmount(ctx, amount, time.Now().Add(-1*time.Minute))
+	if err != nil {
+		log.Printf("lws-hook: db error resolving by amount: %v", err)
+		return models.NewHTTPError(http.StatusUnauthorized, "Unable to resolve transaction for LWS hook")
+	}
+	if len(candidates) != 1 {
+		log.Printf("lws-hook: ambiguous candidates for amount=%d count=%d", amount, len(candidates))
+		return models.NewHTTPError(http.StatusUnauthorized, "Unable to uniquely resolve transaction for LWS hook")
+	}
+	transactionID := candidates[0].ID
+
+	ts := eventTimestamp
+	height := int64(0)
+	if payload.Height != nil {
+		height = *payload.Height
+	} else if payload.TxInfo != nil && payload.TxInfo.Block != nil {
+		height = *payload.TxInfo.Block
+	}
+
+	receive := moneropay.ReceiveAddressResponse{
+		Amount: moneropay.Amount{
+			Expected: amount,
+			Covered: moneropay.Covered{
+				Total:    amount,
+				Unlocked: 0,
+			},
+		},
+		Transactions: []moneropay.Transaction{
+			{
+				Amount:          amount,
+				Confirmations:   payload.Confirmations,
+				DoubleSpendSeen: false,
+				Fee:             0,
+				Height:          height,
+				Timestamp:       ts,
+				TxHash:          txHash,
+				UnlockTime:      0,
+				Locked:          payload.Confirmations == 0,
+			},
+		},
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	httpErr = s.processTransaction(ctx, transactionID, receive)
 	if httpErr != nil {
 		return httpErr
 	}

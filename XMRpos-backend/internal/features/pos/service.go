@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -243,4 +244,39 @@ func formatAtomicAmountTwoDecimals(amount int64) string {
 	}
 
 	return fmt.Sprintf("%d.%02d", integer, decimals)
+}
+
+func (s *PosService) CleanupOldPendingTransactions(ctx context.Context, olderThan time.Duration) (int64, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	cutoff := time.Now().Add(-olderThan)
+
+	cleanupCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	return s.repo.DeletePendingTransactionsBefore(cleanupCtx, cutoff)
+}
+
+func (s *PosService) StartPendingCleanup(ctx context.Context, interval time.Duration, olderThan time.Duration) {
+	if ctx == nil {
+		return
+	}
+
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if _, err := s.CleanupOldPendingTransactions(ctx, olderThan); err != nil {
+					log.Printf("pending transaction cleanup failed: %v", err)
+				}
+			}
+		}
+	}()
 }

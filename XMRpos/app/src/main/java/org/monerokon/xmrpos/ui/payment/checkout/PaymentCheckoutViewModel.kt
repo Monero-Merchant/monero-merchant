@@ -28,6 +28,7 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.Hashtable
 import javax.inject.Inject
+import kotlin.random.Random
 import kotlin.math.pow
 
 @HiltViewModel
@@ -120,9 +121,12 @@ class PaymentCheckoutViewModel @Inject constructor(
                 .movePointRight(12)
                 .longValueExact()
 
+            val randomizedAtomicAmount = atomicAmount - (atomicAmount % 1000) + Random.nextLong(1, 1000)
+            val randomizedNormalizedAmount = BigDecimal.valueOf(randomizedAtomicAmount, 12)
+
             val requiredConfirmations = dataStoreRepository.getBackendConfValue().first().split("-")[0].toInt()
             val backendCreateTransactionRequest = BackendCreateTransactionRequest(
-                atomicAmount,
+                randomizedAtomicAmount,
                 "XMRpos",
                 paymentValue,
                 primaryFiatCurrency,
@@ -143,7 +147,7 @@ class PaymentCheckoutViewModel @Inject constructor(
                 }
                 is DataResult.Success -> {
                     address = response.data.address
-                    val formattedAmount = normalizedAmount.toPlainString()
+                    val formattedAmount = randomizedNormalizedAmount.toPlainString()
                     qrCodeUri = "monero:${response.data.address}?tx_amount=$formattedAmount&tx_description=XMRpos"
 
                     backendRepository.observeCurrentTransactionUpdates(response.data.id)

@@ -7,7 +7,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavHostController
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.net.URI
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import org.monerokon.xmrpos.data.repository.AuthRepository
 import org.monerokon.xmrpos.data.repository.BackendRepository
@@ -69,7 +71,8 @@ class LoginViewModel @Inject constructor(
 
     fun loginPressed() {
         errorMessage = ""
-        if (instanceUrl == "") {
+        val trimmedInstanceUrl = instanceUrl.trim()
+        if (trimmedInstanceUrl.isEmpty()) {
             errorMessage = "Instance URL is required"
             return
         }
@@ -94,14 +97,20 @@ class LoginViewModel @Inject constructor(
             return
         }
 
+        val normalizedInstanceUrl = normalizeInstanceUrl(trimmedInstanceUrl).getOrElse { err ->
+            errorMessage = err.message ?: "Invalid URL"
+            return
+        }
+        instanceUrl = normalizedInstanceUrl
+
         viewModelScope.launch {
-            login()
+            login(normalizedInstanceUrl)
         }
     }
 
-    private suspend fun login() {
+    private suspend fun login(normalizedInstanceUrl: String) {
         inProgress = true
-        val resp = authRepository.login(instanceUrl = instanceUrl, vendorID = vendorID.toInt(), username = username, password = password)
+        val resp = authRepository.login(instanceUrl = normalizedInstanceUrl, vendorID = vendorID.toInt(), username = username, password = password)
         inProgress = false
         resp.fold(
             onSuccess = {
@@ -111,6 +120,29 @@ class LoginViewModel @Inject constructor(
                 errorMessage = it.message ?: "Unknown error"
             }
         )
+    }
+
+    private fun normalizeInstanceUrl(rawUrl: String): Result<String> {
+        val trimmed = rawUrl.trim()
+        val withScheme = when {
+            trimmed.startsWith("http://", ignoreCase = true) || trimmed.startsWith("https://", ignoreCase = true) -> trimmed
+            "://".let { trimmed.contains(it) } -> return Result.failure(IllegalArgumentException("Only http and https URLs are supported"))
+            else -> "https://$trimmed"
+        }
+
+        val parsed = try {
+            URI(withScheme)
+        } catch (e: Exception) {
+            return Result.failure(IllegalArgumentException("Instance URL is invalid"))
+        }
+
+        val scheme = parsed.scheme?.lowercase()
+            ?: return Result.failure(IllegalArgumentException("Instance URL must include http or https"))
+        if (scheme != "http" && scheme != "https") {
+            return Result.failure(IllegalArgumentException("Only http and https URLs are supported"))
+        }
+
+        return Result.success(withScheme)
     }
 
 }

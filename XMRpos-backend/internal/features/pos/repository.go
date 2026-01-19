@@ -2,6 +2,7 @@ package pos
 
 import (
 	"context"
+	"time"
 
 	"github.com/monerokon/xmrpos/xmrpos-backend/internal/core/models"
 	"gorm.io/gorm"
@@ -12,6 +13,7 @@ type PosRepository interface {
 	CreateTransaction(ctx context.Context, transaction *models.Transaction) (*models.Transaction, error)
 	UpdateTransaction(ctx context.Context, transaction *models.Transaction) (*models.Transaction, error)
 	FindTransactionsByPosID(ctx context.Context, vendorID uint, posID uint) ([]*models.Transaction, error)
+	DeletePendingTransactionsBefore(ctx context.Context, cutoff time.Time) (int64, error)
 }
 
 type posRepository struct {
@@ -68,4 +70,48 @@ func (r *posRepository) FindTransactionsByPosID(ctx context.Context, vendorID ui
 	}
 
 	return transactions, nil
+}
+
+func (r *posRepository) DeletePendingTransactionsBefore(ctx context.Context, cutoff time.Time) (int64, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	tx := r.db.WithContext(ctx).Begin()
+	if tx.Error != nil {
+		return 0, tx.Error
+	}
+
+	var ids []uint
+	if err := tx.
+		Model(&models.Transaction{}).
+		Where("confirmed = ? AND created_at < ?", false, cutoff).
+		Pluck("id", &ids).Error; err != nil {
+		tx.Rollback()
+		return 0, err
+	}
+
+	if len(ids) == 0 {
+		if err := tx.Commit().Error; err != nil {
+			return 0, err
+		}
+		return 0, nil
+	}
+
+	if err := tx.Where("transaction_id IN ?", ids).Delete(&models.SubTransaction{}).Error; err != nil {
+		tx.Rollback()
+		return 0, err
+	}
+
+	res := tx.Where("id IN ?", ids).Delete(&models.Transaction{})
+	if res.Error != nil {
+		tx.Rollback()
+		return 0, res.Error
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return 0, err
+	}
+
+	return res.RowsAffected, nil
 }

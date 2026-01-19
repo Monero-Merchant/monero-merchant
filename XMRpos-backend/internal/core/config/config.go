@@ -27,6 +27,7 @@ type Config struct {
 	JWTSecret          string
 	JWTRefreshSecret   string
 	JWTMoneroPaySecret string
+	JWTLwsToken        string
 
 	// MoneroPay API Configuration
 	MoneroPayBaseURL     string
@@ -70,6 +71,7 @@ func LoadConfig() (*Config, error) {
 		JWTSecret:          os.Getenv("JWT_SECRET"),
 		JWTRefreshSecret:   os.Getenv("JWT_REFRESH_SECRET"),
 		JWTMoneroPaySecret: os.Getenv("JWT_MONEROPAY_SECRET"),
+		JWTLwsToken:        os.Getenv("JWT_LWS_TOKEN"),
 
 		// MoneroPay API Configuration
 		MoneroPayBaseURL:     os.Getenv("MONEROPAY_BASE_URL"),
@@ -110,6 +112,7 @@ func LoadConfig() (*Config, error) {
 		config.JWTMoneroPaySecret == "" ||
 		config.MoneroPayBaseURL == "" ||
 		config.MoneroPayCallbackURL == "" ||
+		config.JWTLwsToken == "" ||
 		config.MoneroWalletRPCEndpoint == "" {
 		return nil, fmt.Errorf("missing required environment variables")
 	}

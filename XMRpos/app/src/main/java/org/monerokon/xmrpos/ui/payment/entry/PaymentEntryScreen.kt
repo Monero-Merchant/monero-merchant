@@ -334,9 +334,9 @@ fun PaymentEntryButton(
         modifier = modifier
             .height(64.dp)
             .dropShadow(
-                shape = MaterialTheme.shapes.medium,
+                shape = MaterialTheme.shapes.extraSmall,
                 block = {
-                    radius = 50f
+                    radius = 40.dp.value
                     color = shadowColor.copy(alpha = shadowAlpha.value)
                 }
             )

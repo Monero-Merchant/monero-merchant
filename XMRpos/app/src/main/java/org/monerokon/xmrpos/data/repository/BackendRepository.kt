@@ -89,6 +89,10 @@ class BackendRepository @Inject constructor(
                     // Check if the update is for the currently observed transaction
                     if (this@BackendRepository.currentTransactionId == transactionId) {
                         _currentTransactionStatus.value = update
+                        // Check if it is accepted, then we can stop monitoring
+                        if (update.accepted) {
+                            stopObservingTransactionUpdates()
+                        }
                     }
                 }
             } catch (e: CancellationException) {
@@ -148,14 +152,14 @@ class BackendRepository @Inject constructor(
 
         // 1. Cancel the WebSocket collection Job
         if (webSocketCollectionJob?.isActive == true) {
-            webSocketCollectionJob?.cancel("Stopping WebSocket observation due to new request or cleanup.")
+            webSocketCollectionJob?.cancel()
             Log.d(logTag, "WebSocket collection job cancelled for ID: $previousId")
         }
         webSocketCollectionJob = null
 
         // 2. Cancel the HTTP Polling Job
         if (httpPollingJob?.isActive == true) {
-            httpPollingJob?.cancel("Stopping HTTP polling due to new request or cleanup.")
+            httpPollingJob?.cancel()
             Log.d(logTag, "HTTP polling job cancelled for ID: $previousId")
         }
         httpPollingJob = null

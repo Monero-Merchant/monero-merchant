@@ -38,6 +38,7 @@ import org.monerokon.xmrpos.ui.payment.entry.PaymentEntryScreenRoot
 import org.monerokon.xmrpos.ui.payment.entry.PaymentEntryViewModel
 import org.monerokon.xmrpos.ui.payment.login.LoginScreenRoot
 import org.monerokon.xmrpos.ui.payment.login.LoginViewModel
+import org.monerokon.xmrpos.ui.payment.notification.NotificationDialog
 import org.monerokon.xmrpos.ui.payment.success.PaymentSuccessScreenRoot
 import org.monerokon.xmrpos.ui.payment.success.PaymentSuccessViewModel
 import org.monerokon.xmrpos.ui.settings.backend.BackendScreenRoot
@@ -162,6 +163,10 @@ fun NavGraphRoot(
             BalanceScreenRoot(viewModel = balanceViewModel, navController = navController)
         }
     }
+    NotificationDialog(
+        navController = navController,
+        suppressedRoutes = setOf(PaymentCheckout::class.qualifiedName, PaymentSuccess::class.qualifiedName) as Set<String>
+    )
 }
 
 @Serializable

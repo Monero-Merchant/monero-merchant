@@ -16,11 +16,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.monerokon.xmrpos.data.remote.backend.model.BackendCreateTransactionRequest
-import org.monerokon.xmrpos.data.repository.BackendRepository
-import org.monerokon.xmrpos.data.repository.DataStoreRepository
 import org.monerokon.xmrpos.data.repository.ExchangeRateRepository
 import org.monerokon.xmrpos.data.repository.HceRepository
+import org.monerokon.xmrpos.data.repository.TransactionManager
+import org.monerokon.xmrpos.data.repository.TransactionResult
 import org.monerokon.xmrpos.shared.DataResult
 import org.monerokon.xmrpos.ui.PaymentEntry
 import org.monerokon.xmrpos.ui.PaymentSuccess
@@ -28,15 +27,12 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.Hashtable
 import javax.inject.Inject
-import kotlin.random.Random
-import kotlin.math.pow
 
 @HiltViewModel
 class PaymentCheckoutViewModel @Inject constructor(
     private val exchangeRateRepository: ExchangeRateRepository,
-    private val backendRepository: BackendRepository,
     private val hceRepository: HceRepository,
-    private val dataStoreRepository: DataStoreRepository,
+    private val transactionManager: TransactionManager,
 ) : ViewModel() {
 
     private val logTag = "PaymentCheckoutViewModel"
@@ -44,6 +40,7 @@ class PaymentCheckoutViewModel @Inject constructor(
     private var navController: NavHostController? = null
     private var isFetchingExchangeRates = false
     private var createTransactionJob: Job? = null
+    private var observePaymentJob: Job? = null
 
     fun setNavController(navController: NavHostController) {
         this.navController = navController
@@ -66,7 +63,7 @@ class PaymentCheckoutViewModel @Inject constructor(
 
     init {
         fetchExchangeRates()
-        observePaymentStatus()
+        startObservingPaymentStatus()
     }
 
     fun updatePaymentValue(value: Double) {
@@ -113,45 +110,30 @@ class PaymentCheckoutViewModel @Inject constructor(
     private fun startPayReceive() {
         val xmrAmount = targetXMRvalue
         if (xmrAmount.compareTo(BigDecimal.ZERO) <= 0) return
+
         createTransactionJob?.cancel()
-        createTransactionJob = null
         createTransactionJob = viewModelScope.launch {
-            val normalizedAmount = xmrAmount.setScale(12, RoundingMode.UP)
-            val atomicAmount = normalizedAmount
-                .movePointRight(12)
-                .longValueExact()
+            val rate = exchangeRates?.get(primaryFiatCurrency) ?: 0.0
 
-            val randomizedAtomicAmount = atomicAmount - (atomicAmount % 1000) + Random.nextLong(1, 1000)
-            val randomizedNormalizedAmount = BigDecimal.valueOf(randomizedAtomicAmount, 12)
-
-            val requiredConfirmations = dataStoreRepository.getBackendConfValue().first().split("-")[0].toInt()
-            val backendCreateTransactionRequest = BackendCreateTransactionRequest(
-                randomizedAtomicAmount,
-                "XMRpos",
-                paymentValue,
-                primaryFiatCurrency,
-                requiredConfirmations
-            )
-
-            val response = withContext(Dispatchers.IO) {
-                backendRepository.createTransaction(backendCreateTransactionRequest)
+            val result = withContext(Dispatchers.IO) {
+                transactionManager.createAndRegisterTransaction(
+                    fiatAmount = paymentValue,
+                    primaryFiatCurrency = primaryFiatCurrency,
+                    xmrAmount = xmrAmount,
+                    exchangeRate = rate
+                )
             }
 
-            Log.i(logTag, "MoneroPay: $response")
-
-            when (response) {
-                is DataResult.Failure -> {
-                    errorMessage = response.message
+            when (result) {
+                is TransactionResult.Error -> {
+                    errorMessage = result.message
                     hceRepository.updateUri("")
-                    backendRepository.stopObservingTransactionUpdates()
                 }
-                is DataResult.Success -> {
-                    address = response.data.address
-                    val formattedAmount = randomizedNormalizedAmount.toPlainString()
-                    qrCodeUri = "monero:${response.data.address}?tx_amount=$formattedAmount&tx_description=XMRpos"
-
-                    backendRepository.observeCurrentTransactionUpdates(response.data.id)
-                    hceRepository.updateUri(qrCodeUri)
+                is TransactionResult.Success -> {
+                    address = result.address
+                    qrCodeUri = result.qrCodeUri
+                    hceRepository.updateUri(result.qrCodeUri)
+                    Log.i(logTag, "Transaction created: ${result.transactionId}")
                 }
             }
             createTransactionJob = null
@@ -179,22 +161,21 @@ class PaymentCheckoutViewModel @Inject constructor(
         }
     }
 
-    private fun observePaymentStatus() {
-        viewModelScope.launch {
-            backendRepository.currentTransactionStatus.collect {
-                if (it != null) {
-                    if (it.id == backendRepository.currentTransactionId)
-                    if (it.accepted) {
-                        backendRepository.currentTransactionId = null
-                        navigateToPaymentSuccess(PaymentSuccess(
-                            fiatAmount = paymentValue,
-                            primaryFiatCurrency = primaryFiatCurrency,
-                            txId = it.subTransactions[0].txHash,
-                            xmrAmount = it.amount / 10.0.pow(12),
-                            exchangeRate = exchangeRates?.get(primaryFiatCurrency) ?: 0.0,
-                            timestamp = it.updatedAt,
-                            showPrintReceipt = dataStoreRepository.getPrinterConnectionType().first() != "none"
-                        ))
+    private fun startObservingPaymentStatus() {
+        observePaymentJob?.cancel()
+
+        observePaymentJob = viewModelScope.launch {
+            transactionManager.acceptedTransaction.collect { accepted ->
+                if (accepted != null) {
+                    // Only navigate if we're still on the PaymentCheckout screen
+                    val currentRoute = navController?.currentBackStackEntry?.destination?.route
+
+                    Log.d(logTag, "Payment accepted!")
+
+                    if (currentRoute?.contains("PaymentCheckout/{fiatAmount}/{primaryFiatCurrency}") == true) {
+                        navigateToPaymentSuccess(transactionManager.toPaymentSuccess(accepted))
+                    } else {
+                        Log.d(logTag, "Not navigating as user left PaymentCheckout screen")
                     }
                 }
             }
@@ -222,9 +203,10 @@ class PaymentCheckoutViewModel @Inject constructor(
 
     fun stopReceive() {
         hceRepository.updateUri("")
-        backendRepository.stopObservingTransactionUpdates()
         createTransactionJob?.cancel()
         createTransactionJob = null
+        observePaymentJob?.cancel()
+        observePaymentJob = null
     }
 
     fun resetErrorMessage() {

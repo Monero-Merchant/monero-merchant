@@ -166,14 +166,7 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	role, _ := claims["role"].(string)
-	vendorID := uint(claims["vendor_id"].(float64))
-	passwordVersion := uint32(claims["password_version"].(float64))
-	posID := uint(claims["pos_id"].(float64))
-
-	print(role, vendorID, passwordVersion, posID)
-
-	accessToken, refreshToken, err := h.service.RefreshToken(ctx, req.RefreshToken, vendorID, role, passwordVersion, posID)
+	accessToken, refreshToken, err := h.service.RefreshToken(ctx, req.RefreshToken, claims)
 	if err != nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return

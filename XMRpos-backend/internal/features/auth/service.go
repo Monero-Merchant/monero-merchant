@@ -178,7 +178,7 @@ func (s *AuthService) UpdatePosPasswordFromVendor(ctx context.Context, posID uin
 	return accessToken, newRefreshToken, nil
 }
 
-func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string, vendorID uint, role string, passwordVersion uint32, posID uint) (accessToken string, newRefreshToken string, err error) {
+func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string, claims jwt.MapClaims) (accessToken string, newRefreshToken string, err error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -193,10 +193,14 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string, ven
 		return "", "", errors.New("invalid refresh token")
 	}
 
+	role := claims["role"].(string)
+
 	switch role {
 	case "admin":
 		return s.generateAdminToken()
 	case "vendor":
+		vendorID := uint(claims["vendor_id"].(float64))
+		passwordVersion := uint32(claims["password_version"].(float64))
 		// check that the password version matches
 		vendor, err := s.repo.FindVendorByID(ctx, vendorID)
 		if err != nil {
@@ -207,6 +211,9 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string, ven
 		}
 		return s.generateVendorToken(vendorID, passwordVersion)
 	case "pos":
+		vendorID := uint(claims["vendor_id"].(float64))
+		passwordVersion := uint32(claims["password_version"].(float64))
+		posID := uint(claims["pos_id"].(float64))
 		// check that the password version matches
 		pos, err := s.repo.FindPosByID(ctx, posID)
 		if err != nil {

@@ -41,6 +41,13 @@ const moneroSubaddressPattern = "^8[0-9AB][1-9A-HJ-NP-Za-km-z]{93}$"
 
 var moneroSubaddressRegex = regexp.MustCompile(moneroSubaddressPattern)
 
+// Simple email validation regex
+var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+
+func isValidEmail(email string) bool {
+	return emailRegex.MatchString(email)
+}
+
 func (s *VendorService) StartTransferCompleter(ctx context.Context, interval time.Duration) {
 	go func() {
 		ticker := time.NewTicker(interval)
@@ -319,7 +326,7 @@ func (s *VendorService) transferWithMoneroPay(ctx context.Context, destinations 
 	return txHash, amounts, nil
 }
 
-func (s *VendorService) CreateVendor(ctx context.Context, name string, password string, inviteCode string, moneroSubaddress string) (id uint, httpErr *models.HTTPError) {
+func (s *VendorService) CreateVendor(ctx context.Context, name string, email string, password string, inviteCode string, moneroSubaddress string) (id uint, httpErr *models.HTTPError) {
 
 	if len(name) < 3 || len(name) > 50 {
 		return 0, models.NewHTTPError(http.StatusBadRequest, "name must be at least 3 characters and no more than 50 characters")
@@ -327,6 +334,12 @@ func (s *VendorService) CreateVendor(ctx context.Context, name string, password 
 
 	if len(password) < 8 || len(password) > 50 {
 		return 0, models.NewHTTPError(http.StatusBadRequest, "password must be at least 8 characters and no more than 50 characters")
+	}
+
+	// Validate email if provided
+	email = strings.TrimSpace(email)
+	if email != "" && !isValidEmail(email) {
+		return 0, models.NewHTTPError(http.StatusBadRequest, "invalid email address")
 	}
 
 	nameTaken, err := s.repo.VendorByNameExists(ctx, name)
@@ -368,6 +381,7 @@ func (s *VendorService) CreateVendor(ctx context.Context, name string, password 
 
 	vendor := &models.Vendor{
 		Name:             name,
+		Email:            email,
 		PasswordHash:     string(hashedPassword),
 		MoneroSubaddress: moneroSubaddress,
 	}
@@ -568,4 +582,138 @@ func (s *VendorService) CreateTransfer(ctx context.Context, vendorID uint) *mode
 	}
 
 	return nil
+}
+
+func (s *VendorService) ListPosDevices(ctx context.Context, vendorID uint) ([]*models.Pos, *models.HTTPError) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	devices, err := s.repo.GetPosDevicesByVendorID(ctx, vendorID)
+	if err != nil {
+		return nil, models.NewHTTPError(http.StatusInternalServerError, "DB error: "+err.Error())
+	}
+
+	return devices, nil
+}
+
+type VendorTransactionSummary struct {
+	ID          uint    `json:"id"`
+	PosID       uint    `json:"pos_id"`
+	PosName     string  `json:"pos_name"`
+	Amount      int64   `json:"amount"`
+	Description *string `json:"description"`
+	Accepted    bool    `json:"accepted"`
+	Confirmed   bool    `json:"confirmed"`
+	Transferred bool    `json:"transferred"`
+	CreatedAt   string  `json:"created_at"`
+	TxHash      string  `json:"tx_hash,omitempty"`
+}
+
+type VendorListTransactionsResult struct {
+	Confirmed []VendorTransactionSummary `json:"confirmed_transactions"`
+	Pending   []VendorTransactionSummary `json:"pending_transactions"`
+}
+
+func (s *VendorService) ListTransactionsByVendor(ctx context.Context, vendorID uint) (*VendorListTransactionsResult, *models.HTTPError) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	transactions, err := s.repo.FindTransactionsByVendorID(ctx, vendorID)
+	if err != nil {
+		return nil, models.NewHTTPError(http.StatusInternalServerError, "DB error: "+err.Error())
+	}
+
+	result := &VendorListTransactionsResult{
+		Confirmed: make([]VendorTransactionSummary, 0),
+		Pending:   make([]VendorTransactionSummary, 0),
+	}
+
+	for _, tx := range transactions {
+		posName := ""
+		if tx.Pos.Name != "" {
+			posName = tx.Pos.Name
+		}
+
+		summary := VendorTransactionSummary{
+			ID:          tx.ID,
+			PosID:       tx.PosID,
+			PosName:     posName,
+			Amount:      tx.Amount,
+			Description: tx.Description,
+			Accepted:    tx.Accepted,
+			Confirmed:   tx.Confirmed,
+			Transferred: tx.Transferred,
+			CreatedAt:   tx.CreatedAt.Format(time.RFC3339),
+		}
+
+		if tx.Confirmed && len(tx.SubTransactions) > 0 {
+			summary.TxHash = tx.SubTransactions[0].TxHash
+			result.Confirmed = append(result.Confirmed, summary)
+		} else {
+			result.Pending = append(result.Pending, summary)
+		}
+	}
+
+	return result, nil
+}
+
+const moneroAtomicUnitsPerXMR int64 = 1_000_000_000_000
+
+func (s *VendorService) ExportTransactionsByVendor(ctx context.Context, vendorID uint) (string, *models.HTTPError) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	transactions, err := s.repo.FindTransactionsByVendorID(ctx, vendorID)
+	if err != nil {
+		return "", models.NewHTTPError(http.StatusInternalServerError, "DB error: "+err.Error())
+	}
+
+	var builder strings.Builder
+	builder.WriteString("Koinly Date,Amount,Currency,Label,TxHash")
+
+	rows := 0
+	for _, transaction := range transactions {
+		if !transaction.Confirmed {
+			continue
+		}
+
+		for _, sub := range transaction.SubTransactions {
+			builder.WriteByte('\n')
+			date := sub.Timestamp.UTC()
+			dateStr := fmt.Sprintf("%04d-%02d-%02d 00:00 UTC", date.Year(), date.Month(), date.Day())
+			amount := formatAtomicAmount(sub.Amount)
+			builder.WriteString(fmt.Sprintf("%s,%s,XMR,income,%s", dateStr, amount, sub.TxHash))
+			rows++
+		}
+	}
+
+	if rows == 0 {
+		return "", models.NewHTTPError(http.StatusNotFound, "No confirmed transactions to export")
+	}
+
+	return builder.String(), nil
+}
+
+func formatAtomicAmount(amount int64) string {
+	integer := amount / moneroAtomicUnitsPerXMR
+	remainder := amount % moneroAtomicUnitsPerXMR
+
+	if remainder < 0 {
+		remainder += moneroAtomicUnitsPerXMR
+		integer--
+	}
+
+	centsDivisor := moneroAtomicUnitsPerXMR / 100
+	roundingOffset := centsDivisor / 2
+
+	decimals := (remainder + roundingOffset) / centsDivisor
+	if decimals == 100 {
+		integer++
+		decimals = 0
+	}
+
+	return fmt.Sprintf("%d.%02d", integer, decimals)
 }

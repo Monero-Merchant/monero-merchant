@@ -25,6 +25,8 @@ type VendorRepository interface {
 	GetTransfersToComplete(ctx context.Context, limit int) ([]*models.Transfer, error)
 	MarkTransactionsTransferred(ctx context.Context, tx *gorm.DB, transferID uint, transactionIDs []uint) error
 	MarkTransferCompleted(ctx context.Context, tx *gorm.DB, transferID uint, AmountTransferred int64, txHash string) error
+	GetPosDevicesByVendorID(ctx context.Context, vendorID uint) ([]*models.Pos, error)
+	FindTransactionsByVendorID(ctx context.Context, vendorID uint) ([]*models.Transaction, error)
 }
 
 type vendorRepository struct {
@@ -214,4 +216,34 @@ func (r *vendorRepository) MarkTransferCompleted(ctx context.Context, tx *gorm.D
 			"tx_hash":            txHash,
 			"amount_transferred": AmountTransferred,
 		}).Error
+}
+
+func (r *vendorRepository) GetPosDevicesByVendorID(ctx context.Context, vendorID uint) ([]*models.Pos, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	var devices []*models.Pos
+	if err := r.db.WithContext(ctx).
+		Where("vendor_id = ? AND deleted_at IS NULL", vendorID).
+		Order("created_at DESC").
+		Find(&devices).Error; err != nil {
+		return nil, err
+	}
+	return devices, nil
+}
+
+func (r *vendorRepository) FindTransactionsByVendorID(ctx context.Context, vendorID uint) ([]*models.Transaction, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	var transactions []*models.Transaction
+	if err := r.db.WithContext(ctx).
+		Preload("SubTransactions").
+		Preload("Pos").
+		Where("vendor_id = ?", vendorID).
+		Order("created_at DESC").
+		Find(&transactions).Error; err != nil {
+		return nil, err
+	}
+	return transactions, nil
 }

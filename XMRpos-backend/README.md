@@ -11,6 +11,7 @@ XMRpos-backend is a backend service for managing XMRpos operations. It provides 
 - Admin invite system
 - Health check endpoints
 - Transfer completion and withdrawal management
+- **Vendor Dashboard** - Web-based interface for vendors to manage their account
 
 ## Getting Started
 
@@ -90,13 +91,57 @@ docker compose restart backend
 docker compose up -d --build backend
 ```
 
+## Vendor Dashboard
+
+A web-based dashboard is available for vendors to manage their XMRpos account without needing API tools like Postman or curl.
+
+### Accessing the Dashboard
+
+Navigate to `/vendor-dashboard.html` on your backend server (e.g., `https://your-server.com/vendor-dashboard.html`).
+
+### Dashboard Features
+
+- **Account Overview** - View your current balance and transaction statistics
+- **Transaction History** - Browse all transactions with filtering by status:
+  - Pending (awaiting payment)
+  - Confirmed (payment received)
+  - Transferred (paid out to your wallet)
+- **CSV Export** - Export transaction history in Koinly-compatible format for tax reporting
+- **POS Device Management** - Create and manage multiple POS devices
+- **Withdrawals** - Initiate transfers of your balance to your Monero payout address
+- **Account Settings** - Update password and manage your account
+
+### Dashboard Screenshots
+
+The dashboard provides a clean, modern interface with:
+- Real-time balance display
+- Transaction filtering and search
+- One-click CSV export
+- Mobile-responsive design
+
+### Technical Details
+
+- Single HTML file with no external dependencies
+- Works in any modern browser
+- JWT-based authentication with automatic token refresh
+- XSS protection built-in
+
 ## How to use it
 
-In the future a web interface should be created for easier usage. For now, you can use tools like Postman or curl to interact with the API.
+### Option 1: Vendor Dashboard (Recommended)
+
+1. Navigate to `/vendor-dashboard.html` on your backend server
+2. Click "Create one" to register a new vendor account (requires invite code)
+3. Log in with your credentials
+4. Use the dashboard to manage POS devices, view transactions, and initiate withdrawals
+
+### Option 2: API (Advanced)
+
+For programmatic access or automation, you can use the API directly with tools like Postman or curl.
 
 1. **Login as admin**: Use the `/auth/login-admin` endpoint with admin credentials to obtain a JWT token.
 2. **Create an invite**: Use the `/admin/invite` endpoint to create a new invite code.
-3. **Register a vendor**: Use the `/auth/register` endpoint with the invite code to create a new vendor account.
+3. **Register a vendor**: Use the `/vendor/create` endpoint with the invite code to create a new vendor account.
 4. **Login vendor**: Use the `/auth/login-vendor` endpoint to obtain a JWT token.
 5. **Create POS**: Use the `/vendor/create-pos` endpoint to create a new POS account under the vendor.
 
@@ -133,8 +178,10 @@ To transfer the balance from the vendor account to the Monero wallet, use the `/
 ```json
 {
   "name": "vendor1",
+  "email": "vendor@example.com",
   "password": "yourStrongPassword",
-  "invite_code": "ac8eajc3j"
+  "invite_code": "ac8eajc3j",
+  "monero_subaddress": "8..."
 }
 ```
 
@@ -164,16 +211,30 @@ To transfer the balance from the vendor account to the Monero wallet, use the `/
 
 **POST** `/vendor/transfer-balance`
 
-```json
-{
-  "address": "your_monero_address"
-}
-```
+No body required - transfers the available balance to the vendor's configured Monero payout address.
+
+### Example: List transactions
+
+**GET** `/vendor/transactions`
+
+Returns confirmed and pending transactions for the authenticated vendor.
+
+### Example: Export transactions as CSV
+
+**GET** `/vendor/export`
+
+Returns transaction data in Koinly-compatible CSV format.
+
+### Example: List POS devices
+
+**GET** `/vendor/pos-list`
+
+Returns all POS devices belonging to the authenticated vendor.
 
 ## API Overview
 
-- **Auth**: Login for vendors, POS, and admin.
-- **Vendor**: Create vendor, delete vendor, create POS, get balance, initiate transfer.
+- **Auth**: Login for vendors, POS, and admin; token refresh; password updates.
+- **Vendor**: Create vendor, delete vendor, create POS, get balance, list POS devices, list transactions, export transactions, initiate transfer.
 - **POS**: Create transaction, get transaction details.
 - **Admin**: Create invite codes.
 - **Misc**: Health check endpoint.
@@ -184,6 +245,7 @@ To transfer the balance from the vendor account to the Monero wallet, use the `/
 - `internal/core/`: Core configuration, models, server setup.
 - `internal/features/`: Business logic for vendor, pos, admin, auth, callback, misc.
 - `internal/thirdparty/moneropay/`: MoneroPay API client and models.
+- `web/`: Static web files including the vendor dashboard.
 
 ## Environment Variables
 

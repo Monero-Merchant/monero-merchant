@@ -1,0 +1,1370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>XMRpos Vendor Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    :root {
+      --bg-primary: #1a1b26;
+      --bg-secondary: #24283b;
+      --bg-tertiary: #414868;
+      --text-primary: #c0caf5;
+      --text-secondary: #a9b1d6;
+      --text-muted: #565f89;
+      --accent: #7aa2f7;
+      --accent-hover: #89b4fa;
+      --success: #9ece6a;
+      --warning: #e0af68;
+      --error: #f7768e;
+      --border: #414868;
+      --monero-orange: #ff6600;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      margin: 0;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: var(--accent-hover); }
+
+    /* Layout */
+    .app { display: flex; min-height: 100vh; }
+    .sidebar {
+      width: 240px;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border);
+      padding: 20px 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar-header {
+      padding: 0 20px 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+    .sidebar-header h1 {
+      font-size: 20px;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .sidebar-header h1 .logo {
+      width: 32px;
+      height: 32px;
+      background: var(--monero-orange);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 14px;
+      color: #fff;
+    }
+    .nav { flex: 1; }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+      border-left: 3px solid transparent;
+    }
+    .nav-item:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+    .nav-item.active {
+      background: rgba(122, 162, 247, 0.1);
+      color: var(--accent);
+      border-left-color: var(--accent);
+    }
+    .nav-item svg { width: 20px; height: 20px; }
+    .sidebar-footer {
+      padding: 20px;
+      border-top: 1px solid var(--border);
+      margin-top: auto;
+    }
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .user-avatar {
+      width: 36px;
+      height: 36px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      color: var(--bg-primary);
+    }
+    .user-details { flex: 1; min-width: 0; }
+    .user-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-role { font-size: 12px; color: var(--text-muted); }
+
+    /* Main content */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .header {
+      padding: 20px 30px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h2 { margin: 0; font-size: 24px; }
+    .content { flex: 1; padding: 30px; overflow-y: auto; }
+
+    /* Cards */
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .card-title { font-size: 16px; font-weight: 600; margin: 0; }
+
+    /* Stats grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    .stat-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .stat-label { font-size: 14px; color: var(--text-muted); margin-bottom: 8px; }
+    .stat-value { font-size: 28px; font-weight: 700; }
+    .stat-value.balance { color: var(--monero-orange); }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 500;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: var(--accent); color: var(--bg-primary); }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-secondary { background: var(--bg-tertiary); color: var(--text-primary); }
+    .btn-secondary:hover { background: #525a7a; }
+    .btn-danger { background: var(--error); color: #fff; }
+    .btn-danger:hover { opacity: 0.9; }
+    .btn-sm { padding: 6px 12px; font-size: 13px; }
+
+    /* Tables */
+    .table-wrapper { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { font-weight: 600; color: var(--text-muted); font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+    tr:hover { background: rgba(122, 162, 247, 0.05); }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .status-pending { background: rgba(224, 175, 104, 0.2); color: var(--warning); }
+    .status-confirmed { background: rgba(158, 206, 106, 0.2); color: var(--success); }
+    .status-transferred { background: rgba(122, 162, 247, 0.2); color: var(--accent); }
+
+    /* Forms */
+    .form-group { margin-bottom: 20px; }
+    .form-label { display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px; }
+    .form-input {
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 14px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      transition: border-color 0.2s;
+    }
+    .form-input:focus { outline: none; border-color: var(--accent); }
+    .form-input::placeholder { color: var(--text-muted); }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s;
+    }
+    .modal-overlay.active { opacity: 1; visibility: visible; }
+    .modal {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 30px;
+      width: 100%;
+      max-width: 480px;
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: scale(0.95);
+      transition: transform 0.2s;
+    }
+    .modal-overlay.active .modal { transform: scale(1); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .modal-title { font-size: 20px; font-weight: 600; margin: 0; }
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      font-size: 24px;
+      line-height: 1;
+    }
+    .modal-close:hover { color: var(--text-primary); }
+    .modal-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; }
+
+    /* Login screen */
+    .login-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .login-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      width: 100%;
+      max-width: 400px;
+    }
+    .login-header { text-align: center; margin-bottom: 32px; }
+    .login-logo {
+      width: 64px;
+      height: 64px;
+      background: var(--monero-orange);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 24px;
+      color: #fff;
+      margin: 0 auto 16px;
+    }
+    .login-title { margin: 0 0 8px; font-size: 24px; }
+    .login-subtitle { color: var(--text-muted); margin: 0; }
+    .login-error {
+      background: rgba(247, 118, 142, 0.1);
+      border: 1px solid var(--error);
+      color: var(--error);
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      display: none;
+    }
+    .login-error.show { display: block; }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+    .empty-state svg { width: 64px; height: 64px; margin-bottom: 16px; opacity: 0.5; }
+    .empty-state h3 { margin: 0 0 8px; color: var(--text-secondary); }
+    .empty-state p { margin: 0; }
+
+    /* Loading */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+    }
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Utility */
+    .hidden { display: none !important; }
+    .text-muted { color: var(--text-muted); }
+    .text-success { color: var(--success); }
+    .text-error { color: var(--error); }
+    .text-mono { font-family: 'SF Mono', Consolas, monospace; font-size: 13px; }
+    .mb-0 { margin-bottom: 0; }
+    .mt-20 { margin-top: 20px; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .stats-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Filters */
+    .filters {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .filter-select {
+      padding: 8px 12px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 14px;
+    }
+    .filter-select:focus { outline: none; border-color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<!-- Login Screen -->
+<div id="login-screen" class="login-container">
+  <div class="login-box">
+    <div class="login-header">
+      <div class="login-logo">XMR</div>
+      <h1 class="login-title">Vendor Dashboard</h1>
+      <p class="login-subtitle">Sign in to manage your XMRpos account</p>
+    </div>
+    <div id="login-error" class="login-error"></div>
+    <form id="login-form">
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <input type="text" id="login-username" class="form-input" placeholder="Enter your username" required autocomplete="username" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" id="login-password" class="form-input" placeholder="Enter your password" required autocomplete="current-password" />
+      </div>
+      <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">
+        Sign In
+      </button>
+    </form>
+    <p style="text-align: center; margin-top: 20px; font-size: 14px;">
+      <span class="text-muted">Don't have an account?</span>
+      <a href="#" id="show-signup">Create one</a>
+    </p>
+  </div>
+</div>
+
+<!-- Main App -->
+<div id="app-screen" class="app hidden">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h1><span class="logo">XMR</span> Vendor</h1>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" data-page="dashboard">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-item" data-page="transactions">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        Transactions
+      </div>
+      <div class="nav-item" data-page="pos">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+        POS Devices
+      </div>
+      <div class="nav-item" data-page="settings">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        Settings
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar" id="user-avatar">V</div>
+        <div class="user-details">
+          <div class="user-name" id="user-name">Vendor</div>
+          <div class="user-role">Vendor Account</div>
+        </div>
+      </div>
+      <button class="btn btn-secondary btn-sm mt-20" style="width: 100%;" id="logout-btn">Sign Out</button>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main">
+    <header class="header">
+      <h2 id="page-title">Dashboard</h2>
+      <div id="header-actions"></div>
+    </header>
+    <div class="content" id="page-content">
+      <!-- Content loaded dynamically -->
+    </div>
+  </main>
+</div>
+
+<!-- Create POS Modal -->
+<div class="modal-overlay" id="create-pos-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Create POS Device</h3>
+      <button class="modal-close" data-close="create-pos-modal">&times;</button>
+    </div>
+    <form id="create-pos-form">
+      <div class="form-group">
+        <label class="form-label">Device Name</label>
+        <input type="text" id="pos-name-input" class="form-input" placeholder="e.g., Register 1" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" id="pos-password-input" class="form-input" placeholder="Enter device password" required />
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" data-close="create-pos-modal">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create Device</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Signup Modal -->
+<div class="modal-overlay" id="signup-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Create Vendor Account</h3>
+      <button class="modal-close" data-close="signup-modal">&times;</button>
+    </div>
+    <div id="signup-error" class="login-error"></div>
+    <form id="signup-form">
+      <div class="form-group">
+        <label class="form-label">Store Name</label>
+        <input type="text" id="signup-username" class="form-input" placeholder="Choose a store name" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email (optional)</label>
+        <input type="email" id="signup-email" class="form-input" placeholder="your@email.com" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" id="signup-password" class="form-input" placeholder="Choose a password (min 8 characters)" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Monero Payout Address</label>
+        <input type="text" id="signup-address" class="form-input text-mono" placeholder="8..." required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Invite Code</label>
+        <input type="text" id="signup-invite" class="form-input" placeholder="Enter your invite code" required />
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" data-close="signup-modal">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create Account</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+// ============ Configuration ============
+const API_BASE = '';
+
+// ============ Security: HTML Escaping ============
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  const div = document.createElement('div');
+  div.textContent = String(str);
+  return div.innerHTML;
+}
+
+// ============ State ============
+let auth = {
+  accessToken: null,
+  refreshToken: null,
+  vendorName: null,
+  vendorId: null
+};
+
+let currentPage = 'dashboard';
+let transactions = { confirmed: [], pending: [] };
+
+// ============ Utilities ============
+const $ = id => document.getElementById(id);
+const $$ = sel => document.querySelectorAll(sel);
+
+function formatXMR(atomic) {
+  if (!atomic && atomic !== 0) return '0.000000';
+  const xmr = atomic / 1e12;
+  return xmr.toLocaleString('en-US', { minimumFractionDigits: 6, maximumFractionDigits: 6 });
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '-';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+// ============ API Calls ============
+async function api(endpoint, options = {}) {
+  const headers = { 'Content-Type': 'application/json', ...options.headers };
+  if (auth.accessToken) {
+    headers['Authorization'] = 'Bearer ' + auth.accessToken;
+  }
+
+  const response = await fetch(API_BASE + endpoint, { ...options, headers });
+
+  if (response.status === 401 && auth.refreshToken) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) {
+      headers['Authorization'] = 'Bearer ' + auth.accessToken;
+      return fetch(API_BASE + endpoint, { ...options, headers });
+    }
+  }
+
+  return response;
+}
+
+async function refreshAccessToken() {
+  try {
+    const res = await fetch(API_BASE + '/auth/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: auth.refreshToken })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      auth.accessToken = data.access_token;
+      auth.refreshToken = data.refresh_token || auth.refreshToken;
+      saveAuth();
+      return true;
+    }
+  } catch (e) {
+    console.error('Token refresh failed:', e);
+  }
+  logout();
+  return false;
+}
+
+// ============ Auth ============
+function saveAuth() {
+  localStorage.setItem('xmrpos_auth', JSON.stringify(auth));
+}
+
+function loadAuth() {
+  const saved = localStorage.getItem('xmrpos_auth');
+  if (saved) {
+    auth = JSON.parse(saved);
+    return auth.accessToken !== null;
+  }
+  return false;
+}
+
+function logout() {
+  auth = { accessToken: null, refreshToken: null, vendorName: null, vendorId: null };
+  localStorage.removeItem('xmrpos_auth');
+  showLoginScreen();
+}
+
+async function login(username, password) {
+  const res = await fetch(API_BASE + '/auth/login-vendor', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: username, password })
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Login failed' }));
+    throw new Error(err.error || 'Invalid credentials');
+  }
+
+  const data = await res.json();
+  auth.accessToken = data.access_token;
+  auth.refreshToken = data.refresh_token;
+  auth.vendorName = username;
+  auth.vendorId = data.vendor_id;
+  saveAuth();
+}
+
+async function signup(username, email, password, address, inviteCode) {
+  const res = await fetch(API_BASE + '/vendor/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: username,
+      email: email || '',
+      password,
+      monero_subaddress: address,
+      invite_code: inviteCode
+    })
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Signup failed' }));
+    throw new Error(err.message || err.error || 'Could not create account');
+  }
+
+  await login(username, password);
+}
+
+// ============ Data Fetching ============
+async function fetchBalance() {
+  const res = await api('/vendor/balance');
+  if (res.ok) {
+    return await res.json();
+  }
+  return { balance: 0 };
+}
+
+async function fetchTransactions() {
+  const res = await api('/vendor/transactions');
+  if (res.ok) {
+    const data = await res.json();
+    transactions.confirmed = data.confirmed_transactions || [];
+    transactions.pending = data.pending_transactions || [];
+    return transactions;
+  }
+  return { confirmed: [], pending: [] };
+}
+
+async function fetchPosDevices() {
+  const res = await api('/vendor/pos-list');
+  if (res.ok) {
+    const data = await res.json();
+    return data.devices || [];
+  }
+  return [];
+}
+
+async function initiateWithdrawal() {
+  const res = await api('/vendor/transfer-balance', { method: 'POST' });
+  const data = await res.json().catch(() => ({}));
+  return { ok: res.ok, data };
+}
+
+async function createPOS(name, password) {
+  const res = await api('/vendor/create-pos', {
+    method: 'POST',
+    body: JSON.stringify({ name, password })
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Failed to create POS' }));
+    throw new Error(err.error || 'Could not create POS device');
+  }
+
+  return await res.json();
+}
+
+async function exportCSV() {
+  const res = await api('/vendor/export');
+  if (res.ok) {
+    const data = await res.json();
+    const blob = new Blob([data.csv_data], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'xmrpos-transactions-' + new Date().toISOString().split('T')[0] + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } else {
+    const data = await res.json().catch(() => ({}));
+    alert(data.error || 'No transactions to export');
+  }
+}
+
+// ============ DOM Builders (Safe) ============
+function createStatCard(label, value, isBalance) {
+  const card = document.createElement('div');
+  card.className = 'stat-card';
+
+  const labelEl = document.createElement('div');
+  labelEl.className = 'stat-label';
+  labelEl.textContent = label;
+
+  const valueEl = document.createElement('div');
+  valueEl.className = 'stat-value' + (isBalance ? ' balance' : '');
+  valueEl.textContent = value;
+
+  card.appendChild(labelEl);
+  card.appendChild(valueEl);
+  return card;
+}
+
+function createTransactionRow(tx) {
+  const tr = document.createElement('tr');
+
+  const tdId = document.createElement('td');
+  tdId.textContent = '#' + tx.id;
+
+  const tdAmount = document.createElement('td');
+  tdAmount.className = 'text-mono';
+  tdAmount.textContent = formatXMR(tx.amount) + ' XMR';
+
+  const tdStatus = document.createElement('td');
+  const badge = document.createElement('span');
+  badge.className = 'status-badge';
+  if (tx.transferred) {
+    badge.className += ' status-transferred';
+    badge.textContent = 'Transferred';
+  } else if (tx.confirmed) {
+    badge.className += ' status-confirmed';
+    badge.textContent = 'Confirmed';
+  } else if (tx.accepted) {
+    badge.className += ' status-pending';
+    badge.textContent = 'Pending';
+  } else {
+    badge.className += ' status-pending';
+    badge.textContent = 'Awaiting Payment';
+  }
+  tdStatus.appendChild(badge);
+
+  const tdPos = document.createElement('td');
+  tdPos.textContent = tx.pos_name || '-';
+
+  const tdDesc = document.createElement('td');
+  tdDesc.textContent = tx.description || '-';
+
+  const tdDate = document.createElement('td');
+  tdDate.className = 'text-muted';
+  tdDate.textContent = formatDate(tx.created_at);
+
+  tr.appendChild(tdId);
+  tr.appendChild(tdAmount);
+  tr.appendChild(tdStatus);
+  tr.appendChild(tdPos);
+  tr.appendChild(tdDesc);
+  tr.appendChild(tdDate);
+
+  return tr;
+}
+
+function createTransactionTable(txList) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'table-wrapper';
+
+  if (!txList || txList.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>';
+    const h3 = document.createElement('h3');
+    h3.textContent = 'No transactions yet';
+    const p = document.createElement('p');
+    p.textContent = 'Transactions will appear here once payments are received';
+    empty.appendChild(h3);
+    empty.appendChild(p);
+    wrapper.appendChild(empty);
+    return wrapper;
+  }
+
+  const table = document.createElement('table');
+  const thead = document.createElement('thead');
+  const headerRow = document.createElement('tr');
+  ['ID', 'Amount', 'Status', 'POS Device', 'Description', 'Date'].forEach(text => {
+    const th = document.createElement('th');
+    th.textContent = text;
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  txList.forEach(tx => {
+    tbody.appendChild(createTransactionRow(tx));
+  });
+  table.appendChild(tbody);
+  wrapper.appendChild(table);
+
+  return wrapper;
+}
+
+// ============ UI Rendering ============
+function showLoginScreen() {
+  $('login-screen').classList.remove('hidden');
+  $('app-screen').classList.add('hidden');
+}
+
+function showAppScreen() {
+  $('login-screen').classList.add('hidden');
+  $('app-screen').classList.remove('hidden');
+  $('user-name').textContent = auth.vendorName || 'Vendor';
+  $('user-avatar').textContent = (auth.vendorName || 'V')[0].toUpperCase();
+  navigateTo('dashboard');
+}
+
+function navigateTo(page) {
+  currentPage = page;
+
+  $$('.nav-item').forEach(item => {
+    item.classList.toggle('active', item.dataset.page === page);
+  });
+
+  const titles = {
+    dashboard: 'Dashboard',
+    transactions: 'Transactions',
+    pos: 'POS Devices',
+    settings: 'Settings'
+  };
+  $('page-title').textContent = titles[page] || 'Dashboard';
+
+  renderPage(page);
+}
+
+async function renderPage(page) {
+  const content = $('page-content');
+  const headerActions = $('header-actions');
+
+  while (content.firstChild) content.removeChild(content.firstChild);
+  while (headerActions.firstChild) headerActions.removeChild(headerActions.firstChild);
+
+  const loading = document.createElement('div');
+  loading.className = 'loading';
+  loading.innerHTML = '<div class="spinner"></div>';
+  content.appendChild(loading);
+
+  switch (page) {
+    case 'dashboard':
+      await renderDashboard(content, headerActions);
+      break;
+    case 'transactions':
+      await renderTransactions(content, headerActions);
+      break;
+    case 'pos':
+      await renderPOS(content, headerActions);
+      break;
+    case 'settings':
+      renderSettings(content, headerActions);
+      break;
+  }
+}
+
+async function renderDashboard(container, headerActions) {
+  const [balanceData] = await Promise.all([
+    fetchBalance(),
+    fetchTransactions()
+  ]);
+
+  const totalConfirmed = transactions.confirmed.length;
+  const totalPending = transactions.pending.length;
+  const todayTx = transactions.confirmed.filter(tx => {
+    const d = new Date(tx.created_at);
+    const today = new Date();
+    return d.toDateString() === today.toDateString();
+  }).length;
+
+  while (container.firstChild) container.removeChild(container.firstChild);
+
+  // Stats grid
+  const statsGrid = document.createElement('div');
+  statsGrid.className = 'stats-grid';
+  statsGrid.appendChild(createStatCard('Available Balance', formatXMR(balanceData.balance) + ' XMR', true));
+  statsGrid.appendChild(createStatCard('Pending Transactions', String(totalPending), false));
+  statsGrid.appendChild(createStatCard('Confirmed Transactions', String(totalConfirmed), false));
+  statsGrid.appendChild(createStatCard("Today's Transactions", String(todayTx), false));
+  container.appendChild(statsGrid);
+
+  // Withdrawal card
+  const withdrawCard = document.createElement('div');
+  withdrawCard.className = 'card';
+  withdrawCard.style.marginBottom = '20px';
+
+  const withdrawHeader = document.createElement('div');
+  withdrawHeader.className = 'card-header';
+  const withdrawTitle = document.createElement('h3');
+  withdrawTitle.className = 'card-title';
+  withdrawTitle.textContent = 'Withdraw Funds';
+  withdrawHeader.appendChild(withdrawTitle);
+  withdrawCard.appendChild(withdrawHeader);
+
+  const withdrawInfo = document.createElement('p');
+  withdrawInfo.className = 'text-muted';
+  withdrawInfo.textContent = 'Transfer your confirmed balance to your Monero payout address. Minimum withdrawal: 0.003 XMR. Transfers are processed automatically within 30 seconds.';
+  withdrawCard.appendChild(withdrawInfo);
+
+  const withdrawBtnDiv = document.createElement('div');
+  withdrawBtnDiv.className = 'mt-20';
+  const withdrawBtn = document.createElement('button');
+  withdrawBtn.className = 'btn btn-primary';
+  withdrawBtn.textContent = 'Initiate Withdrawal';
+  withdrawBtn.disabled = balanceData.balance < 3000000;
+  if (balanceData.balance < 3000000) {
+    withdrawBtn.title = 'Minimum balance of 0.003 XMR required';
+  }
+  withdrawBtn.addEventListener('click', async () => {
+    withdrawBtn.disabled = true;
+    withdrawBtn.textContent = 'Processing...';
+    const { ok, data } = await initiateWithdrawal();
+    if (ok) {
+      alert(data.message || 'Withdrawal initiated successfully!');
+      navigateTo('dashboard');
+    } else {
+      alert(data.error || 'Failed to initiate withdrawal');
+      withdrawBtn.disabled = false;
+      withdrawBtn.textContent = 'Initiate Withdrawal';
+    }
+  });
+  withdrawBtnDiv.appendChild(withdrawBtn);
+  withdrawCard.appendChild(withdrawBtnDiv);
+  container.appendChild(withdrawCard);
+
+  // Recent transactions card
+  const card = document.createElement('div');
+  card.className = 'card';
+
+  const cardHeader = document.createElement('div');
+  cardHeader.className = 'card-header';
+
+  const cardTitle = document.createElement('h3');
+  cardTitle.className = 'card-title';
+  cardTitle.textContent = 'Recent Transactions';
+
+  const viewAllBtn = document.createElement('button');
+  viewAllBtn.className = 'btn btn-secondary btn-sm';
+  viewAllBtn.textContent = 'View All';
+  viewAllBtn.addEventListener('click', () => navigateTo('transactions'));
+
+  cardHeader.appendChild(cardTitle);
+  cardHeader.appendChild(viewAllBtn);
+  card.appendChild(cardHeader);
+
+  const allTx = [...transactions.pending, ...transactions.confirmed].slice(0, 5);
+  card.appendChild(createTransactionTable(allTx));
+  container.appendChild(card);
+}
+
+async function renderTransactions(container, headerActions) {
+  const exportBtn = document.createElement('button');
+  exportBtn.className = 'btn btn-primary';
+  exportBtn.textContent = 'Export CSV';
+  exportBtn.addEventListener('click', exportCSV);
+  headerActions.appendChild(exportBtn);
+
+  await fetchTransactions();
+
+  while (container.firstChild) container.removeChild(container.firstChild);
+
+  const card = document.createElement('div');
+  card.className = 'card';
+
+  // Filters
+  const filters = document.createElement('div');
+  filters.className = 'filters';
+
+  const select = document.createElement('select');
+  select.className = 'filter-select';
+  select.id = 'filter-status';
+  [
+    { value: 'all', text: 'All Status' },
+    { value: 'pending', text: 'Pending' },
+    { value: 'confirmed', text: 'Confirmed' },
+    { value: 'transferred', text: 'Transferred' }
+  ].forEach(opt => {
+    const option = document.createElement('option');
+    option.value = opt.value;
+    option.textContent = opt.text;
+    select.appendChild(option);
+  });
+  select.addEventListener('change', filterTransactions);
+  filters.appendChild(select);
+  card.appendChild(filters);
+
+  const tableContainer = document.createElement('div');
+  tableContainer.id = 'transactions-table';
+  const allTx = [...transactions.pending, ...transactions.confirmed];
+  tableContainer.appendChild(createTransactionTable(allTx));
+  card.appendChild(tableContainer);
+
+  container.appendChild(card);
+}
+
+function filterTransactions() {
+  const status = $('filter-status').value;
+  let filtered = [...transactions.pending, ...transactions.confirmed];
+
+  if (status === 'pending') {
+    filtered = transactions.pending;
+  } else if (status === 'confirmed') {
+    filtered = transactions.confirmed.filter(tx => tx.confirmed && !tx.transferred);
+  } else if (status === 'transferred') {
+    filtered = transactions.confirmed.filter(tx => tx.transferred);
+  }
+
+  const tableContainer = $('transactions-table');
+  while (tableContainer.firstChild) tableContainer.removeChild(tableContainer.firstChild);
+  tableContainer.appendChild(createTransactionTable(filtered));
+}
+
+async function renderPOS(container, headerActions) {
+  const addBtn = document.createElement('button');
+  addBtn.className = 'btn btn-primary';
+  addBtn.textContent = 'Add Device';
+  addBtn.addEventListener('click', () => openModal('create-pos-modal'));
+  headerActions.appendChild(addBtn);
+
+  while (container.firstChild) container.removeChild(container.firstChild);
+
+  const devices = await fetchPosDevices();
+
+  const card = document.createElement('div');
+  card.className = 'card';
+
+  const cardHeader = document.createElement('div');
+  cardHeader.className = 'card-header';
+  const cardTitle = document.createElement('h3');
+  cardTitle.className = 'card-title';
+  cardTitle.textContent = 'Your POS Devices';
+  cardHeader.appendChild(cardTitle);
+  card.appendChild(cardHeader);
+
+  if (devices.length === 0) {
+    const emptyState = document.createElement('div');
+    emptyState.className = 'empty-state';
+    const h3 = document.createElement('h3');
+    h3.textContent = 'No POS devices yet';
+    const p = document.createElement('p');
+    p.textContent = 'Create POS devices to accept payments. Each device gets its own login credentials.';
+    emptyState.appendChild(h3);
+    emptyState.appendChild(p);
+    card.appendChild(emptyState);
+
+    const btnDiv = document.createElement('div');
+    btnDiv.style.textAlign = 'center';
+    btnDiv.style.paddingBottom = '20px';
+    const createBtn = document.createElement('button');
+    createBtn.className = 'btn btn-primary';
+    createBtn.textContent = 'Create Your First POS Device';
+    createBtn.addEventListener('click', () => openModal('create-pos-modal'));
+    btnDiv.appendChild(createBtn);
+    card.appendChild(btnDiv);
+  } else {
+    const tableWrapper = document.createElement('div');
+    tableWrapper.className = 'table-wrapper';
+    const table = document.createElement('table');
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+    ['ID', 'Name', 'Created'].forEach(text => {
+      const th = document.createElement('th');
+      th.textContent = text;
+      headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    devices.forEach(device => {
+      const tr = document.createElement('tr');
+      const tdId = document.createElement('td');
+      tdId.textContent = '#' + device.id;
+      const tdName = document.createElement('td');
+      tdName.textContent = device.name;
+      const tdCreated = document.createElement('td');
+      tdCreated.className = 'text-muted';
+      tdCreated.textContent = formatDate(device.created_at);
+      tr.appendChild(tdId);
+      tr.appendChild(tdName);
+      tr.appendChild(tdCreated);
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    tableWrapper.appendChild(table);
+    card.appendChild(tableWrapper);
+  }
+
+  container.appendChild(card);
+}
+
+function renderSettings(container, headerActions) {
+  while (container.firstChild) container.removeChild(container.firstChild);
+
+  // Account settings card
+  const accountCard = document.createElement('div');
+  accountCard.className = 'card';
+
+  const accountHeader = document.createElement('div');
+  accountHeader.className = 'card-header';
+  const accountTitle = document.createElement('h3');
+  accountTitle.className = 'card-title';
+  accountTitle.textContent = 'Account Settings';
+  accountHeader.appendChild(accountTitle);
+  accountCard.appendChild(accountHeader);
+
+  const usernameGroup = document.createElement('div');
+  usernameGroup.className = 'form-group';
+  const usernameLabel = document.createElement('label');
+  usernameLabel.className = 'form-label';
+  usernameLabel.textContent = 'Username';
+  const usernameInput = document.createElement('input');
+  usernameInput.type = 'text';
+  usernameInput.className = 'form-input';
+  usernameInput.value = auth.vendorName || '';
+  usernameInput.disabled = true;
+  usernameGroup.appendChild(usernameLabel);
+  usernameGroup.appendChild(usernameInput);
+  accountCard.appendChild(usernameGroup);
+
+  const idGroup = document.createElement('div');
+  idGroup.className = 'form-group';
+  const idLabel = document.createElement('label');
+  idLabel.className = 'form-label';
+  idLabel.textContent = 'Vendor ID';
+  const idInput = document.createElement('input');
+  idInput.type = 'text';
+  idInput.className = 'form-input';
+  idInput.value = auth.vendorId || 'N/A';
+  idInput.disabled = true;
+  idGroup.appendChild(idLabel);
+  idGroup.appendChild(idInput);
+  accountCard.appendChild(idGroup);
+
+  container.appendChild(accountCard);
+
+  // Change password card
+  const passCard = document.createElement('div');
+  passCard.className = 'card mt-20';
+
+  const passHeader = document.createElement('div');
+  passHeader.className = 'card-header';
+  const passTitle = document.createElement('h3');
+  passTitle.className = 'card-title';
+  passTitle.textContent = 'Change Password';
+  passHeader.appendChild(passTitle);
+  passCard.appendChild(passHeader);
+
+  const passForm = document.createElement('form');
+  passForm.id = 'change-password-form';
+
+  const currentPassGroup = document.createElement('div');
+  currentPassGroup.className = 'form-group';
+  const currentPassLabel = document.createElement('label');
+  currentPassLabel.className = 'form-label';
+  currentPassLabel.textContent = 'Current Password';
+  const currentPassInput = document.createElement('input');
+  currentPassInput.type = 'password';
+  currentPassInput.id = 'current-password';
+  currentPassInput.className = 'form-input';
+  currentPassInput.required = true;
+  currentPassGroup.appendChild(currentPassLabel);
+  currentPassGroup.appendChild(currentPassInput);
+  passForm.appendChild(currentPassGroup);
+
+  const newPassGroup = document.createElement('div');
+  newPassGroup.className = 'form-group';
+  const newPassLabel = document.createElement('label');
+  newPassLabel.className = 'form-label';
+  newPassLabel.textContent = 'New Password';
+  const newPassInput = document.createElement('input');
+  newPassInput.type = 'password';
+  newPassInput.id = 'new-password';
+  newPassInput.className = 'form-input';
+  newPassInput.required = true;
+  newPassGroup.appendChild(newPassLabel);
+  newPassGroup.appendChild(newPassInput);
+  passForm.appendChild(newPassGroup);
+
+  const passBtn = document.createElement('button');
+  passBtn.type = 'submit';
+  passBtn.className = 'btn btn-primary';
+  passBtn.textContent = 'Update Password';
+  passForm.appendChild(passBtn);
+
+  passForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const currentPass = $('current-password').value;
+    const newPass = $('new-password').value;
+
+    try {
+      const res = await api('/auth/update-password', {
+        method: 'POST',
+        body: JSON.stringify({ current_password: currentPass, new_password: newPass })
+      });
+
+      if (res.ok) {
+        alert('Password updated successfully');
+        $('current-password').value = '';
+        $('new-password').value = '';
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || 'Failed to update password');
+      }
+    } catch (e) {
+      alert('Error updating password');
+    }
+  });
+
+  passCard.appendChild(passForm);
+  container.appendChild(passCard);
+
+  // Danger zone
+  const dangerCard = document.createElement('div');
+  dangerCard.className = 'card mt-20';
+
+  const dangerHeader = document.createElement('div');
+  dangerHeader.className = 'card-header';
+  const dangerTitle = document.createElement('h3');
+  dangerTitle.className = 'card-title';
+  dangerTitle.textContent = 'Danger Zone';
+  dangerHeader.appendChild(dangerTitle);
+  dangerCard.appendChild(dangerHeader);
+
+  const dangerText = document.createElement('p');
+  dangerText.className = 'text-muted';
+  dangerText.textContent = 'Once you delete your account, there is no going back. Please be certain.';
+  dangerCard.appendChild(dangerText);
+
+  const deleteBtn = document.createElement('button');
+  deleteBtn.className = 'btn btn-danger mt-20';
+  deleteBtn.textContent = 'Delete Account';
+  deleteBtn.addEventListener('click', confirmDeleteAccount);
+  dangerCard.appendChild(deleteBtn);
+
+  container.appendChild(dangerCard);
+}
+
+async function confirmDeleteAccount() {
+  if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+    const name = prompt('Type your username to confirm deletion:');
+    if (name === auth.vendorName) {
+      try {
+        const res = await api('/vendor/delete', { method: 'POST' });
+        if (res.ok) {
+          alert('Account deleted');
+          logout();
+        } else {
+          alert('Failed to delete account');
+        }
+      } catch (e) {
+        alert('Error deleting account');
+      }
+    }
+  }
+}
+
+// ============ Modals ============
+function openModal(id) {
+  $(id).classList.add('active');
+}
+
+function closeModal(id) {
+  $(id).classList.remove('active');
+}
+
+// ============ Event Listeners ============
+document.addEventListener('DOMContentLoaded', () => {
+  if (loadAuth()) {
+    showAppScreen();
+  } else {
+    showLoginScreen();
+  }
+
+  $('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = $('login-username').value.trim();
+    const password = $('login-password').value;
+
+    try {
+      $('login-error').classList.remove('show');
+      await login(username, password);
+      showAppScreen();
+    } catch (err) {
+      $('login-error').textContent = err.message;
+      $('login-error').classList.add('show');
+    }
+  });
+
+  $('show-signup').addEventListener('click', (e) => {
+    e.preventDefault();
+    openModal('signup-modal');
+  });
+
+  $('signup-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = $('signup-username').value.trim();
+    const email = $('signup-email').value.trim();
+    const password = $('signup-password').value;
+    const address = $('signup-address').value.trim();
+    const invite = $('signup-invite').value.trim();
+
+    try {
+      $('signup-error').classList.remove('show');
+      await signup(username, email, password, address, invite);
+      closeModal('signup-modal');
+      showAppScreen();
+    } catch (err) {
+      $('signup-error').textContent = err.message;
+      $('signup-error').classList.add('show');
+    }
+  });
+
+  $('create-pos-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = $('pos-name-input').value.trim();
+    const password = $('pos-password-input').value;
+
+    try {
+      await createPOS(name, password);
+      closeModal('create-pos-modal');
+      $('pos-name-input').value = '';
+      $('pos-password-input').value = '';
+      alert('POS device "' + escapeHtml(name) + '" created successfully!');
+      navigateTo('pos');
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+
+  $$('.nav-item').forEach(item => {
+    item.addEventListener('click', () => navigateTo(item.dataset.page));
+  });
+
+  $('logout-btn').addEventListener('click', logout);
+
+  // Modal close buttons
+  $$('[data-close]').forEach(btn => {
+    btn.addEventListener('click', () => closeModal(btn.dataset.close));
+  });
+
+  // Close modals on overlay click
+  $$('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        overlay.classList.remove('active');
+      }
+    });
+  });
+});
+</script>
+
+</body>
+</html>

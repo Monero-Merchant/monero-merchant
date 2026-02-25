@@ -7,6 +7,7 @@ import (
 type Vendor struct {
 	gorm.Model
 	Name             string        `gorm:"not null;uniqueIndex:idx_vendor_name,where:deleted_at IS NULL"`
+	Email            string        `gorm:"type:varchar(255)"`
 	PasswordHash     string        `gorm:"not null"`
 	PasswordVersion  uint32        `gorm:"not null;default:1"`
 	MoneroSubaddress string        `gorm:"not null"`

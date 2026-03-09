@@ -190,3 +190,42 @@ func (h *PosHandler) ExportTransactions(w http.ResponseWriter, r *http.Request) 
 	resp := exportTransactionsResponse{CSVData: csvData}
 	_ = json.NewEncoder(w).Encode(resp)
 }
+
+type posBalanceResponse struct {
+	Balance int64 `json:"balance"`
+}
+
+func (h *PosHandler) GetPosBalance(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+	r = r.WithContext(ctx)
+
+	role, ok := utils.GetClaimFromContext(r.Context(), models.ClaimsRoleKey)
+	if !ok || !(role == "pos") {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	vendorID, ok := utils.GetClaimFromContext(r.Context(), models.ClaimsVendorIDKey)
+	if !ok {
+		http.Error(w, "Unauthorized: vendorID not found", http.StatusUnauthorized)
+		return
+	}
+
+	posID, ok := utils.GetClaimFromContext(r.Context(), models.ClaimsPosIDKey)
+	if !ok {
+		http.Error(w, "Unauthorized: posID not found", http.StatusUnauthorized)
+		return
+	}
+
+	balance, err := h.service.GetPosBalance(ctx, *(vendorID.(*uint)), *(posID.(*uint)))
+	if err != nil {
+		http.Error(w, "Failed to retrieve balance", http.StatusInternalServerError)
+		return
+	}
+
+	resp := posBalanceResponse{Balance: balance}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(resp)
+}

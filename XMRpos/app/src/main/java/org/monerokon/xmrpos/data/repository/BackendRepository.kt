@@ -8,11 +8,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import org.monerokon.xmrpos.data.remote.backend.BackendRemoteDataSource
-import org.monerokon.xmrpos.data.remote.backend.model.BackendBalanceVendorResponse
+import org.monerokon.xmrpos.data.remote.backend.model.BackendBalancePosResponse
 import org.monerokon.xmrpos.data.remote.backend.model.BackendCreateTransactionRequest
 import org.monerokon.xmrpos.data.remote.backend.model.BackendCreateTransactionResponse
 import org.monerokon.xmrpos.data.remote.backend.model.BackendHealthResponse
@@ -48,8 +47,8 @@ class BackendRepository @Inject constructor(
         return backendRemoteDataSource.fetchHealth()
     }
 
-    suspend fun fetchVendorBalance(): DataResult<BackendBalanceVendorResponse> {
-        return backendRemoteDataSource.fetchVendorBalance()
+    suspend fun fetchPosBalance(): DataResult<BackendBalancePosResponse> {
+        return backendRemoteDataSource.fetchPosBalance()
     }
 
     suspend fun createTransaction(request: BackendCreateTransactionRequest): DataResult<BackendCreateTransactionResponse> {

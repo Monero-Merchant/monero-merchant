@@ -1,6 +1,5 @@
 package org.monerokon.xmrpos.data.remote.backend
 
-import android.system.Os
 import android.util.Log
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -13,14 +12,13 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.URLProtocol
 import io.ktor.http.encodedPath
 import io.ktor.websocket.Frame
-import io.ktor.websocket.close
 import io.ktor.websocket.readReason
 import io.ktor.websocket.readText
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.serialization.json.Json
-import org.monerokon.xmrpos.data.remote.backend.model.BackendBalanceVendorResponse
+import org.monerokon.xmrpos.data.remote.backend.model.BackendBalancePosResponse
 import org.monerokon.xmrpos.data.remote.backend.model.BackendCreateTransactionRequest
 import org.monerokon.xmrpos.data.remote.backend.model.BackendCreateTransactionResponse
 import org.monerokon.xmrpos.data.remote.backend.model.BackendHealthResponse
@@ -43,9 +41,9 @@ class BackendRemoteDataSource @Inject constructor(
         }
     }
 
-    suspend fun fetchVendorBalance(): DataResult<BackendBalanceVendorResponse> {
+    suspend fun fetchPosBalance(): DataResult<BackendBalancePosResponse> {
         return try {
-            val response = httpClient.get("vendor/balance").body<BackendBalanceVendorResponse>()
+            val response = httpClient.get("pos/balance").body<BackendBalancePosResponse>()
             DataResult.Success(response)
         } catch (e: Exception) {
             DataResult.Failure(message = e.message ?: "Unknown error")

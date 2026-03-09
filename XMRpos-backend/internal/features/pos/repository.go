@@ -12,6 +12,7 @@ type PosRepository interface {
 	FindTransactionByID(ctx context.Context, id uint) (*models.Transaction, error)
 	CreateTransaction(ctx context.Context, transaction *models.Transaction) (*models.Transaction, error)
 	UpdateTransaction(ctx context.Context, transaction *models.Transaction) (*models.Transaction, error)
+	GetBalance(ctx context.Context, vendorID uint, posID uint) (int64, error)
 	FindTransactionsByPosID(ctx context.Context, vendorID uint, posID uint) ([]*models.Transaction, error)
 	DeletePendingTransactionsBefore(ctx context.Context, cutoff time.Time) (int64, error)
 }
@@ -70,6 +71,21 @@ func (r *posRepository) FindTransactionsByPosID(ctx context.Context, vendorID ui
 	}
 
 	return transactions, nil
+}
+
+func (r *posRepository) GetBalance(ctx context.Context, vendorID uint, posID uint) (int64, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	var balance int64
+	err := r.db.WithContext(ctx).Model(&models.Transaction{}).
+		Where("vendor_id = ? AND pos_id = ? AND confirmed = ? AND transferred = ?", vendorID, posID, true, false).
+		Select("COALESCE(SUM(amount), 0)").
+		Scan(&balance).Error
+	if err != nil {
+		return 0, err
+	}
+	return balance, nil
 }
 
 func (r *posRepository) DeletePendingTransactionsBefore(ctx context.Context, cutoff time.Time) (int64, error) {

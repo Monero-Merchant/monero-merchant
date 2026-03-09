@@ -121,7 +121,7 @@ func (s *PosService) GetTransaction(ctx context.Context, transactionID uint, ven
 	// Find the transaction by ID
 	if ctx == nil {
 		ctx = context.Background()
-  }
+	}
 	transaction, err := s.repo.FindTransactionByID(ctx, transactionID)
 	if err != nil {
 		return nil, models.NewHTTPError(404, "Transaction not found")
@@ -133,6 +133,15 @@ func (s *PosService) GetTransaction(ctx context.Context, transactionID uint, ven
 	}
 
 	return transaction, nil
+}
+
+// GetPosBalance retrieves the current balance for a given POS (subset of vendor balance)
+func (s *PosService) GetPosBalance(ctx context.Context, vendorID uint, posID uint) (int64, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	return s.repo.GetBalance(ctx, vendorID, posID)
 }
 
 // Check if the vendor and POS are authorized for the transaction

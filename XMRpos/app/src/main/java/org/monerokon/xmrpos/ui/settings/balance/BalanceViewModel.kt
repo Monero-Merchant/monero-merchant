@@ -11,9 +11,9 @@ import androidx.navigation.NavHostController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import org.monerokon.xmrpos.data.remote.backend.model.BackendBalancePosResponse
 import org.monerokon.xmrpos.shared.DataResult
 import org.monerokon.xmrpos.ui.Settings
-import org.monerokon.xmrpos.data.remote.backend.model.BackendBalanceVendorResponse
 import org.monerokon.xmrpos.data.repository.BackendRepository
 import org.monerokon.xmrpos.data.repository.ExchangeRateRepository
 import javax.inject.Inject
@@ -36,7 +36,7 @@ class BalanceViewModel @Inject constructor(
         navController?.popBackStack()
     }
 
-    var vendorBalance: DataResult<BackendBalanceVendorResponse>? by mutableStateOf(null)
+    var posBalance: DataResult<BackendBalancePosResponse>? by mutableStateOf(null)
 
     var primaryFiatCurrency by mutableStateOf("")
 
@@ -45,7 +45,7 @@ class BalanceViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            vendorBalance = backendRepository.fetchVendorBalance()
+            posBalance = backendRepository.fetchPosBalance()
         }
         viewModelScope.launch {
             val primaryFiatCurrencyResponse = exchangeRateRepository.getPrimaryFiatCurrency().first()

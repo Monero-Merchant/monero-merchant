@@ -16,7 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import org.monerokon.xmrpos.data.remote.backend.model.BackendBalanceVendorResponse
+import org.monerokon.xmrpos.data.remote.backend.model.BackendBalancePosResponse
 import org.monerokon.xmrpos.shared.DataResult
 import org.monerokon.xmrpos.ui.common.composables.FiatCard
 import java.math.BigDecimal
@@ -28,7 +28,7 @@ fun BalanceScreenRoot(viewModel: BalanceViewModel, navController: NavHostControl
     viewModel.setNavController(navController)
     BalanceScreen(
         onBackClick = viewModel::navigateToMainSettings,
-        vendorBalance = viewModel.vendorBalance,
+        posBalance = viewModel.posBalance,
         primaryFiatCurrency = viewModel.primaryFiatCurrency,
         exchangeRate = viewModel.exchangeRate,
     )
@@ -38,7 +38,7 @@ fun BalanceScreenRoot(viewModel: BalanceViewModel, navController: NavHostControl
 @Composable
 fun BalanceScreen(
     onBackClick: () -> Unit,
-    vendorBalance: DataResult<BackendBalanceVendorResponse>?,
+    posBalance: DataResult<BackendBalancePosResponse>?,
     primaryFiatCurrency: String,
     exchangeRate: Double?,
 ) {
@@ -53,9 +53,9 @@ fun BalanceScreen(
             Spacer(modifier = Modifier.height(20.dp))
             Text("Balance", style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(16.dp))
-            when (vendorBalance) {
+            when (posBalance) {
                 is DataResult.Success -> {
-                    val xmrBalance = BigDecimal.valueOf(vendorBalance.data.balance)
+                    val xmrBalance = BigDecimal.valueOf(posBalance.data.balance)
                         .divide(BigDecimal.valueOf(1000000000000), 14, RoundingMode.HALF_UP)
                     FiatCard(
                         label = "Balance Amount",
@@ -68,7 +68,7 @@ fun BalanceScreen(
                 }
 
                 is DataResult.Failure -> {
-                    Text("Error: ${vendorBalance.message}", style = MaterialTheme.typography.bodyMedium)
+                    Text("Error: ${posBalance.message}", style = MaterialTheme.typography.bodyMedium)
                 }
 
                 else -> {

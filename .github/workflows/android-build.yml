@@ -1,4 +1,4 @@
-name: PR XMRpos Debug APK build
+name: PR Monero Merchant Debug APK build
 
 on:
   issue_comment:
@@ -24,7 +24,7 @@ jobs:
       image: ghcr.io/ajs-xmr/xmrpos-android-builder:df7af4d
 
     env:
-      PROJECT_DIR: XMRpos
+      PROJECT_DIR: pos
       GRADLE_USER_HOME: /home/gradle-cache
       ANDROID_HOME: /opt/android-sdk
       ANDROID_SDK_ROOT: /opt/android-sdk
@@ -77,7 +77,7 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: XMRpos-APK-pr${{ steps.prmeta.outputs.pr_number }}
+          name: Monero-Merchant-APK-pr${{ steps.prmeta.outputs.pr_number }}
           path: |
             ${{ env.PROJECT_DIR }}/**/build/outputs/apk/**/*.apk
             ${{ env.PROJECT_DIR }}/**/outputs/apk/**/*.apk

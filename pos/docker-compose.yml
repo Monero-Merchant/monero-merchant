@@ -15,8 +15,8 @@ services:
     working_dir: /workspace
     volumes:
       - ./:/workspace
-      - gradle-cache:/home/gradle-cache
-      - android-sdk:/opt/android-sdk
+      - monero-merchant-gradle-cache:/home/gradle-cache
+      - monero-merchant-android-sdk:/opt/android-sdk
 volumes:
-  gradle-cache:
-  android-sdk:
+  monero-merchant-gradle-cache:
+  monero-merchant-android-sdk:

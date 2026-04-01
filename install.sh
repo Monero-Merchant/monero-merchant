@@ -9,17 +9,17 @@ NC='\033[0m'
 
 HOST_IP="${HOST_IP:-127.10.1.1}"
 HOST_GATEWAY="${HOST_GATEWAY:-host.docker.internal}"
-SHARED_NETWORK="${SHARED_NETWORK:-xmrpos-shared}"
+SHARED_NETWORK="${SHARED_NETWORK:-monero-merchant-shared}"
 HOST_IP_SLUG="${HOST_IP//./-}"
 MONEROPAY_COMPOSE_PROJECT="${MONEROPAY_COMPOSE_PROJECT:-moneropay-${HOST_IP_SLUG}}"
-XMRPOS_COMPOSE_PROJECT="${XMRPOS_COMPOSE_PROJECT:-xmrpos-${HOST_IP_SLUG}}"
+MONERO_MERCHANT_COMPOSE_PROJECT="${MONERO_MERCHANT_COMPOSE_PROJECT:-monero-merchant-${HOST_IP_SLUG}}"
 DEFAULT_MONEROPAY_DIR="/root/moneropay-${HOST_IP_SLUG}"
-DEFAULT_XMRPOS_DIR="/root/XMRpos-${HOST_IP_SLUG}"
+DEFAULT_MONERO_MERCHANT_DIR="/root/monero-merchant-${HOST_IP_SLUG}"
 LEGACY_MONEROPAY_DIR="/root/moneropay"
-LEGACY_XMRPOS_DIR="/root/XMRpos"
+LEGACY_MONERO_MERCHANT_DIR="/root/monero-merchant"
 MONEROPAY_SERVICE_HOST="${MONEROPAY_SERVICE_HOST:-${MONEROPAY_COMPOSE_PROJECT}-moneropay-1}"
 MONEROPAY_WALLET_RPC_SERVICE_HOST="${MONEROPAY_WALLET_RPC_SERVICE_HOST:-${MONEROPAY_COMPOSE_PROJECT}-monero-wallet-rpc-1}"
-XMRPOS_BACKEND_SERVICE_HOST="${XMRPOS_BACKEND_SERVICE_HOST:-${XMRPOS_COMPOSE_PROJECT}-backend-1}"
+MONERO_MERCHANT_BACKEND_SERVICE_HOST="${MONERO_MERCHANT_BACKEND_SERVICE_HOST:-${MONERO_MERCHANT_COMPOSE_PROJECT}-backend-1}"
 
 if [[ -z "${MONEROPAY_DIR:-}" ]]; then
     if [[ "$HOST_IP_SLUG" == "127-10-1-1" && -d "$LEGACY_MONEROPAY_DIR" && ! -d "$DEFAULT_MONEROPAY_DIR" ]]; then
@@ -29,15 +29,15 @@ if [[ -z "${MONEROPAY_DIR:-}" ]]; then
     fi
 fi
 
-if [[ -z "${XMRPOS_DIR:-}" ]]; then
-    if [[ "$HOST_IP_SLUG" == "127-10-1-1" && -d "$LEGACY_XMRPOS_DIR" && ! -d "$DEFAULT_XMRPOS_DIR" ]]; then
-        XMRPOS_DIR="$LEGACY_XMRPOS_DIR"
+if [[ -z "${MONERO_MERCHANT_DIR:-}" ]]; then
+    if [[ "$HOST_IP_SLUG" == "127-10-1-1" && -d "$LEGACY_MONERO_MERCHANT_DIR" && ! -d "$DEFAULT_MONERO_MERCHANT_DIR" ]]; then
+        MONERO_MERCHANT_DIR="$LEGACY_MONERO_MERCHANT_DIR"
     else
-        XMRPOS_DIR="$DEFAULT_XMRPOS_DIR"
+        MONERO_MERCHANT_DIR="$DEFAULT_MONERO_MERCHANT_DIR"
     fi
 fi
 
-XMRPOS_BACKEND_DIR="${XMRPOS_DIR}/XMRpos-backend"
+MONERO_MERCHANT_BACKEND_DIR="${MONERO_MERCHANT_DIR}/backend"
 
 MONERO_DAEMON_HOST="${MONERO_DAEMON_HOST:-node.monerodevs.org}"
 MONERO_DAEMON_PORT="${MONERO_DAEMON_PORT:-18089}"
@@ -47,14 +47,14 @@ MONEROPAY_HOST_PORT="${MONEROPAY_HOST_PORT:-5000}"
 MONEROPAY_WALLET_RPC_HOST_PORT="${MONEROPAY_WALLET_RPC_HOST_PORT:-18083}"
 MONEROPAY_DB_HOST_PORT="${MONEROPAY_DB_HOST_PORT:-15432}"
 
-XMRPOS_DB_USER="${XMRPOS_DB_USER:-xmrpos}"
-XMRPOS_DB_NAME="${XMRPOS_DB_NAME:-xmrpos}"
+MONERO_MERCHANT_DB_USER="${MONERO_MERCHANT_DB_USER:-monero_merchant}"
+MONERO_MERCHANT_DB_NAME="${MONERO_MERCHANT_DB_NAME:-monero_merchant}"
 BACKEND_PORT="${BACKEND_PORT:-8080}"
-XMRPOS_DB_HOST_PORT="${XMRPOS_DB_HOST_PORT:-55432}"
+MONERO_MERCHANT_DB_HOST_PORT="${MONERO_MERCHANT_DB_HOST_PORT:-55432}"
 
-MONEROPAY_BASE_URL_FOR_XMRPOS="${MONEROPAY_BASE_URL_FOR_XMRPOS:-http://${MONEROPAY_SERVICE_HOST}:5000}"
-MONEROPAY_CALLBACK_URL_FOR_XMRPOS="${MONEROPAY_CALLBACK_URL_FOR_XMRPOS:-http://${XMRPOS_BACKEND_SERVICE_HOST}:8080/callback/receive/{jwt}}"
-MONERO_WALLET_RPC_ENDPOINT_FOR_XMRPOS="${MONERO_WALLET_RPC_ENDPOINT_FOR_XMRPOS:-http://${MONEROPAY_WALLET_RPC_SERVICE_HOST}:28081/json_rpc}"
+MONEROPAY_BASE_URL_FOR_MONERO_MERCHANT="${MONEROPAY_BASE_URL_FOR_MONERO_MERCHANT:-http://${MONEROPAY_SERVICE_HOST}:5000}"
+MONEROPAY_CALLBACK_URL_FOR_MONERO_MERCHANT="${MONEROPAY_CALLBACK_URL_FOR_MONERO_MERCHANT:-http://${MONERO_MERCHANT_BACKEND_SERVICE_HOST}:8080/callback/receive/{jwt}}"
+MONERO_WALLET_RPC_ENDPOINT_FOR_MONERO_MERCHANT="${MONERO_WALLET_RPC_ENDPOINT_FOR_MONERO_MERCHANT:-http://${MONEROPAY_WALLET_RPC_SERVICE_HOST}:28081/json_rpc}"
 
 require_root() {
     if [[ "$(id -u)" -ne 0 ]]; then
@@ -272,13 +272,13 @@ EOF
     echo -e "${RED}MoneroPay health endpoint not reachable yet. Check logs with 'cd ${MONEROPAY_DIR} && docker compose logs -f'.${NC}"
 }
 
-install_xmrpos() {
-    if [[ ! -d "$XMRPOS_DIR" ]]; then
-        echo -e "${GREEN}Cloning XMRpos...${NC}"
-        git clone https://github.com/MoneroKon/XMRpos "$XMRPOS_DIR"
+install_monero_merchant() {
+    if [[ ! -d "$MONERO_MERCHANT_DIR" ]]; then
+        echo -e "${GREEN}Cloning Monero Merchant...${NC}"
+        git clone https://github.com/Monero-Merchant/monero-merchant "$MONERO_MERCHANT_DIR"
     fi
 
-    cd "$XMRPOS_BACKEND_DIR"
+    cd "$MONERO_MERCHANT_BACKEND_DIR"
 
     local env_path=".env"
     local existing_admin_name existing_admin_password existing_db_user existing_db_password existing_db_name
@@ -318,17 +318,17 @@ install_xmrpos() {
     fi
 
     local db_user
-    if [[ -n "${XMRPOS_DB_USER:-}" ]]; then
-        db_user="$XMRPOS_DB_USER"
+    if [[ -n "${MONERO_MERCHANT_DB_USER:-}" ]]; then
+        db_user="$MONERO_MERCHANT_DB_USER"
     elif [[ -n "$existing_db_user" ]]; then
         db_user="$existing_db_user"
     else
-        db_user="xmrpos"
+        db_user="monero_merchant"
     fi
 
     local db_password
-    if [[ -n "${XMRPOS_DB_PASSWORD:-}" ]]; then
-        db_password="$XMRPOS_DB_PASSWORD"
+    if [[ -n "${MONERO_MERCHANT_DB_PASSWORD:-}" ]]; then
+        db_password="$MONERO_MERCHANT_DB_PASSWORD"
     elif [[ -n "$existing_db_password" ]]; then
         db_password="$existing_db_password"
     else
@@ -336,12 +336,12 @@ install_xmrpos() {
     fi
 
     local db_name
-    if [[ -n "${XMRPOS_DB_NAME:-}" ]]; then
-        db_name="$XMRPOS_DB_NAME"
+    if [[ -n "${MONERO_MERCHANT_DB_NAME:-}" ]]; then
+        db_name="$MONERO_MERCHANT_DB_NAME"
     elif [[ -n "$existing_db_name" ]]; then
         db_name="$existing_db_name"
     else
-        db_name="xmrpos"
+        db_name="monero_merchant"
     fi
 
     local port_value="$BACKEND_PORT"
@@ -421,10 +421,10 @@ JWT_SECRET=${jwt_secret}
 JWT_REFRESH_SECRET=${jwt_refresh_secret}
 JWT_MONEROPAY_SECRET=${jwt_moneropay_secret}
 
-MONEROPAY_BASE_URL=${MONEROPAY_BASE_URL_FOR_XMRPOS}
-MONEROPAY_CALLBACK_URL=${MONEROPAY_CALLBACK_URL_FOR_XMRPOS}
+MONEROPAY_BASE_URL=${MONEROPAY_BASE_URL_FOR_MONERO_MERCHANT}
+MONEROPAY_CALLBACK_URL=${MONEROPAY_CALLBACK_URL_FOR_MONERO_MERCHANT}
 
-MONERO_WALLET_RPC_ENDPOINT=${MONERO_WALLET_RPC_ENDPOINT_FOR_XMRPOS}
+MONERO_WALLET_RPC_ENDPOINT=${MONERO_WALLET_RPC_ENDPOINT_FOR_MONERO_MERCHANT}
 MONERO_WALLET_RPC_USERNAME=${rpc_username}
 MONERO_WALLET_RPC_PASSWORD=${rpc_password}
 
@@ -433,7 +433,7 @@ WALLET_PASSWORD=${wallet_password}
 EOF
 
     update_compose_port "docker-compose.yaml" "backend" "${HOST_IP}:${BACKEND_PORT}:8080"
-    update_compose_port "docker-compose.yaml" "db" "${HOST_IP}:${XMRPOS_DB_HOST_PORT}:5432"
+    update_compose_port "docker-compose.yaml" "db" "${HOST_IP}:${MONERO_MERCHANT_DB_HOST_PORT}:5432"
 
     cat > docker-compose.override.yaml <<EOF
 services:
@@ -446,64 +446,64 @@ networks:
     external: true
 EOF
 
-    echo -e "${GREEN}Building XMRpos backend image...${NC}"
-    COMPOSE_PROJECT_NAME="${XMRPOS_COMPOSE_PROJECT}" docker compose build --no-cache
+    echo -e "${GREEN}Building Monero Merchant backend image...${NC}"
+    COMPOSE_PROJECT_NAME="${MONERO_MERCHANT_COMPOSE_PROJECT}" docker compose build --no-cache
 
-    echo -e "${GREEN}Starting XMRpos stack...${NC}"
-    COMPOSE_PROJECT_NAME="${XMRPOS_COMPOSE_PROJECT}" docker compose up -d
+    echo -e "${GREEN}Starting Monero Merchant stack...${NC}"
+    COMPOSE_PROJECT_NAME="${MONERO_MERCHANT_COMPOSE_PROJECT}" docker compose up -d
 
-    echo -e "${YELLOW}XMRpos containers:${NC}"
-    COMPOSE_PROJECT_NAME="${XMRPOS_COMPOSE_PROJECT}" docker compose ps
+    echo -e "${YELLOW}Monero Merchant containers:${NC}"
+    COMPOSE_PROJECT_NAME="${MONERO_MERCHANT_COMPOSE_PROJECT}" docker compose ps
 
-    echo -e "${YELLOW}Waiting for XMRpos health endpoint...${NC}"
+    echo -e "${YELLOW}Waiting for Monero Merchant health endpoint...${NC}"
     local health_url="http://${HOST_IP}:${BACKEND_PORT}/misc/health"
     sleep 5
     local attempts=10
     while (( attempts-- > 0 )); do
-        if curl -fsS "${health_url}" >/tmp/xmrpos-health 2>/dev/null; then
-            cat /tmp/xmrpos-health | jq .
-            rm -f /tmp/xmrpos-health
+        if curl -fsS "${health_url}" >/tmp/monero-merchant-health 2>/dev/null; then
+            cat /tmp/monero-merchant-health | jq .
+            rm -f /tmp/monero-merchant-health
             return
         fi
         sleep 3
     done
-    rm -f /tmp/xmrpos-health 2>/dev/null || true
-    echo -e "${RED}XMRpos health endpoint not reachable yet. Check logs with 'cd ${XMRPOS_BACKEND_DIR} && docker compose logs -f'.${NC}"
+    rm -f /tmp/monero-merchant-health 2>/dev/null || true
+    echo -e "${RED}Monero Merchant health endpoint not reachable yet. Check logs with 'cd ${MONERO_MERCHANT_BACKEND_DIR} && docker compose logs -f'.${NC}"
 }
 
 install_all() {
     require_root
     ensure_prereqs
     install_moneropay
-    install_xmrpos
+    install_monero_merchant
     ensure_host_ip_on_loopback
-    echo -e "${GREEN}Combined MoneroPay + XMRpos installation complete.${NC}"
+    echo -e "${GREEN}Combined MoneroPay + Monero Merchant installation complete.${NC}"
 }
 
 clean_all() {
     require_root
-    echo -e "${RED}WARNING: This will remove MoneroPay and XMRpos, including wallets under ${MONEROPAY_DIR}/data/wallet and ~/wallets. Make sure you have backups before continuing.${NC}"
+    echo -e "${RED}WARNING: This will remove MoneroPay and Monero Merchant, including wallets under ${MONEROPAY_DIR}/data/wallet and ~/wallets. Make sure you have backups before continuing.${NC}"
     read -r -p "Type 'delete' to confirm cleanup: " response
     if [[ "$response" != "delete" ]]; then
         echo -e "${YELLOW}Cleanup cancelled.${NC}"
         exit 0
     fi
 
-    remove_compose_project "${XMRPOS_COMPOSE_PROJECT}" "XMRpos"
+    remove_compose_project "${MONERO_MERCHANT_COMPOSE_PROJECT}" "Monero Merchant"
     remove_compose_project "${MONEROPAY_COMPOSE_PROJECT}" "MoneroPay"
 
     declare -A seen_dirs=()
-    for dir in "$XMRPOS_DIR" "$DEFAULT_XMRPOS_DIR"; do
+    for dir in "$MONERO_MERCHANT_DIR" "$DEFAULT_MONERO_MERCHANT_DIR"; do
         if [[ -n "$dir" && -d "$dir" && -z "${seen_dirs[$dir]:-}" ]]; then
-            echo -e "${YELLOW}Removing XMRpos directory ${dir}...${NC}"
+            echo -e "${YELLOW}Removing Monero Merchant directory ${dir}...${NC}"
             rm -rf "$dir"
             seen_dirs["$dir"]=1
         fi
     done
-    if [[ "$HOST_IP_SLUG" == "127-10-1-1" && -d "$LEGACY_XMRPOS_DIR" && -z "${seen_dirs[$LEGACY_XMRPOS_DIR]:-}" ]]; then
-        echo -e "${YELLOW}Removing legacy XMRpos directory ${LEGACY_XMRPOS_DIR}...${NC}"
-        rm -rf "$LEGACY_XMRPOS_DIR"
-        seen_dirs["$LEGACY_XMRPOS_DIR"]=1
+    if [[ "$HOST_IP_SLUG" == "127-10-1-1" && -d "$LEGACY_MONERO_MERCHANT_DIR" && -z "${seen_dirs[$LEGACY_MONERO_MERCHANT_DIR]:-}" ]]; then
+        echo -e "${YELLOW}Removing legacy Monero Merchant directory ${LEGACY_MONERO_MERCHANT_DIR}...${NC}"
+        rm -rf "$LEGACY_MONERO_MERCHANT_DIR"
+        seen_dirs["$LEGACY_MONERO_MERCHANT_DIR"]=1
     fi
 
     declare -A seen_moneropay_dirs=()

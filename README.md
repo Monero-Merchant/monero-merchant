@@ -1,7 +1,7 @@
-# XMRpos Client
-**Free and Open Source Monero Point of Sale (POS) Android App**
+# Monero Merchant
+**Free and Open Source Monero Point of Sale (POS)**
 
-<img width="500" src="https://github.com/user-attachments/assets/ac8414eb-4d28-4609-a4fe-4144e17d46f7" alt="XMRpos screenshot" />
+<img width="500" src="https://github.com/user-attachments/assets/ac8414eb-4d28-4609-a4fe-4144e17d46f7" alt="Monero Merchant screenshot" />
 <br>
 <a href="https://xmrpos.twed.org/fdroid" target="_blank" rel="noopener noreferrer">
   <img width="200" height="77" alt="fdroid" src="https://github.com/user-attachments/assets/125217c5-1bfb-4ba3-85e4-dc69ab78637b" />
@@ -9,7 +9,7 @@
 
 ---
 
-**XMRpos** is a FOSS Android point-of-sale (POS) system for accepting Monero (XMR) payments. It provides a **self-hosted**, **trustless**, and **secure** payment solution for vendors and merchants.
+**Monero Merchant** is a FOSS Android point-of-sale (POS) system for accepting Monero (XMR) payments. It provides a **self-hosted**, **trustless**, and **secure** payment solution for vendors and merchants.
 
 ---
 
@@ -39,12 +39,12 @@
 
 ### Installation
 ```bash
-wget https://raw.githubusercontent.com/MoneroKon/XMRpos/refs/heads/main/install.sh -O install.sh
+wget https://raw.githubusercontent.com/Monero-Merchant/monero-merchant/refs/heads/main/install.sh -O install.sh
 chmod +x install.sh
 sudo ./install.sh
 ````
 
-This installs **MoneroPay** and **XMRpos-backend** using Docker.
+This installs **MoneroPay** and **backend** using Docker.
 It automatically configures environment variables, secrets, health checks, and wallet setup.
 
 ### Uninstall / Cleanup
@@ -56,7 +56,7 @@ sudo ./install.sh clean
 Removes all containers, cloned repositories, and `~/wallets`.
 **Always back up your wallets** before cleaning.
 
-> For detailed backend API usage, see [`XMRpos-backend/README.md`](XMRpos-backend/README.md).
+> For detailed backend API usage, see [`backend/README.md`](backend/README.md).
 
 ---
 
@@ -99,7 +99,7 @@ Removes all containers, cloned repositories, and `~/wallets`.
 
 ---
 
-## Building XMRpos Client from Source
+## Building Monero Merchant Client from Source
 
 ### Prerequisites
 
@@ -108,14 +108,14 @@ Removes all containers, cloned repositories, and `~/wallets`.
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/MoneroKon/XMRpos
+git clone https://github.com/Monero-Merchant/monero-merchant
 ```
 
 ### 2. Open in Android Studio
 
 1. Launch Android Studio
 2. Select **Open an Existing Project**
-3. Navigate to `XMRpos/XMRpos` and open it
+3. Navigate to `monero-merchant/pos` and open it
 
 ### 3. Install Dependencies
 
@@ -165,8 +165,8 @@ Output: `app/build/outputs/apk/`
 ### Build
 
 ```bash
-git clone https://github.com/MoneroKon/XMRpos
-cd XMRpos/XMRpos
+git clone https://github.com/Monero-Merchant/monero-merchant
+cd monero-merchant/pos
 docker compose build --no-cache
 docker compose up --abort-on-container-exit
 ```
@@ -174,12 +174,12 @@ docker compose up --abort-on-container-exit
 ### Using Prebuilt Image
 
 ```bash
-git clone https://github.com/MoneroKon/XMRpos
-cd XMRpos/XMRpos
+git clone https://github.com/Monero-Merchant/monero-merchant
+cd monero-merchant/pos
 docker run --rm \
   -v "$PWD":/workspace \
-  -v xmrpos-gradle:/home/gradle-cache \
-  -v xmrpos-android-sdk:/opt/android-sdk \
+  -v monero-merchant-gradle:/home/gradle-cache \
+  -v monero-merchant-android-sdk:/opt/android-sdk \
   ghcr.io/ajs-xmr/xmrpos-android-builder:df7af4d
 ```
 

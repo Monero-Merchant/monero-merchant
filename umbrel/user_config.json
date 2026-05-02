@@ -1,0 +1,59 @@
+{
+  "form": [
+    {
+      "field": "MONERO_DAEMON_RPC_HOSTNAME",
+      "label": "Monero Daemon RPC Hostname",
+      "type": "text",
+      "placeholder": "node.sethforprivacy.com",
+      "value": "",
+      "tooltip": "Hostname of the Monero daemon RPC interface. You can use a public node or run your own."
+    },
+    {
+      "field": "MONERO_DAEMON_RPC_PORT",
+      "label": "Monero Daemon RPC Port",
+      "type": "number",
+      "placeholder": "18081",
+      "value": "18081",
+      "tooltip": "RPC port of the Monero daemon (18081 for mainnet, 28081 for testnet)"
+    },
+    {
+      "field": "MONERO_WALLET_RPC_HOSTNAME",
+      "label": "Wallet RPC Hostname",
+      "type": "text",
+      "placeholder": "monero-merchant-server",
+      "value": "monero-merchant-server",
+      "hidden": true
+    },
+    {
+      "field": "MONERO_WALLET_RPC_PORT",
+      "label": "Wallet RPC Port",
+      "type": "number",
+      "placeholder": "18082",
+      "value": "18082",
+      "hidden": true
+    },
+    {
+      "field": "MONERO_WALLET_RPC_USERNAME",
+      "label": "Wallet RPC Username",
+      "type": "text",
+      "placeholder": "monero",
+      "value": "monero"
+    },
+    {
+      "field": "MONERO_WALLET_RPC_PASSWORD",
+      "label": "Wallet RPC Password",
+      "type": "password",
+      "placeholder": "Enter wallet RPC password",
+      "value": "",
+      "tooltip": "Password for the Monero wallet RPC interface"
+    },
+    {
+      "field": "ADMIN_PASSWORD",
+      "label": "Admin Password",
+      "type": "password",
+      "placeholder": "Enter admin password",
+      "value": "",
+      "tooltip": "Password for accessing the Monero Merchant admin dashboard"
+    }
+  ]
+}

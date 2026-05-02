@@ -1,0 +1,31 @@
+name: Monero Merchant
+id: monero-merchant
+tagline: Accept private Monero payments at your POS
+icon: https://raw.githubusercontent.com/Monero-Merchant/monero-merchant/main/icons/monero-merchant.png
+version: "1.0.0"
+website: https://github.com/Monero-Merchant/monero-merchant
+repo: https://github.com/Monero-Merchant/monero-merchant
+support: https://github.com/Monero-Merchant/monero-merchant/issues
+docs: https://github.com/Monero-Merchant/monero-merchant/blob/main/README.md
+port: 9090
+description: >
+  Monero Merchant enables merchants to accept Monero (XMR) payments 
+  through a point-of-sale system. Fast, private, and seamless payments 
+  with no middleman. Features include QR code generation, payment 
+  monitoring, and transaction history.
+category: Finance
+widget:
+  id: "monero-merchant"
+  config:
+    url: "http://__IP__:__PORT__"
+    resize:
+      width: 301
+      height: 211
+dependencies: []
+path: ""
+submitter: Monero Merchant
+submission: https://github.com/Monero-Merchant/monero-merchant
+resources:
+  ram: 512
+  storage: 256
+  cpu: "1"

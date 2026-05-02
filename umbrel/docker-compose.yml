@@ -1,0 +1,34 @@
+version: "3.7"
+
+services:
+  app_proxy:
+    environment:
+      APP_HOST: monero-merchant-server
+      APP_PORT: 9090
+      
+  server:
+    image: monero-merchant/server:latest
+    restart: on-failure
+    stop_grace_period: 1m
+    command: ["./moneropay"]
+    volumes:
+      - ${APP_DATA_DIR}/data:/app/data
+    environment:
+      MONERO_DAEMON_RPC_HOSTNAME: ${APP_MONERO_DAEMON_RPC_HOSTNAME}
+      MONERO_DAEMON_RPC_PORT: ${APP_MONERO_DAEMON_RPC_PORT:-18081}
+      MONERO_WALLET_RPC_HOSTNAME: ${APP_MONERO_WALLET_RPC_HOSTNAME}
+      MONERO_WALLET_RPC_PORT: ${APP_MONERO_WALLET_RPC_PORT:-18082}
+      MONERO_WALLET_RPC_USERNAME: ${APP_MONERO_WALLET_RPC_USERNAME}
+      MONERO_WALLET_RPC_PASSWORD: ${APP_MONERO_WALLET_RPC_PASSWORD}
+      ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD}
+      DB_PATH: /app/data/moneropay.db
+      LISTEN_HOST: 0.0.0.0
+      LISTEN_PORT: "9090"
+    networks:
+      - umbrel
+    depends_on:
+      - app_proxy
+
+networks:
+  umbrel:
+    external: true

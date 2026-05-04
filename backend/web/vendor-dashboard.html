@@ -518,6 +518,7 @@ let auth = {
 
 let currentPage = 'dashboard';
 let transactions = { confirmed: [], pending: [] };
+let lastCreatedPOSConnection = null;
 
 // ============ Utilities ============
 const $ = id => document.getElementById(id);
@@ -533,6 +534,22 @@ function formatDate(dateStr) {
   if (!dateStr) return '-';
   const d = new Date(dateStr);
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+async function copyText(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const area = document.createElement('textarea');
+  area.value = text;
+  area.setAttribute('readonly', '');
+  area.style.position = 'fixed';
+  area.style.left = '-9999px';
+  document.body.appendChild(area);
+  area.select();
+  document.execCommand('copy');
+  document.body.removeChild(area);
 }
 
 // ============ API Calls ============
@@ -1116,6 +1133,55 @@ async function renderPOS(container, headerActions) {
   }
 
   container.appendChild(card);
+
+  if (lastCreatedPOSConnection) {
+    container.appendChild(createPOSConnectionCard(lastCreatedPOSConnection));
+  }
+}
+
+function createPOSConnectionCard(details) {
+  const card = document.createElement('div');
+  card.className = 'card mt-20';
+
+  const header = document.createElement('div');
+  header.className = 'card-header';
+  const title = document.createElement('h3');
+  title.className = 'card-title';
+  title.textContent = 'New POS Connection Details';
+  header.appendChild(title);
+  card.appendChild(header);
+
+  const note = document.createElement('p');
+  note.className = 'text-muted';
+  note.textContent = 'Copy these into the Android POS app now. The password is shown only because you just entered it; it is not recoverable later.';
+  card.appendChild(note);
+
+  const rows = [
+    ['Backend URL', details.backendUrl],
+    ['Login endpoint', details.loginEndpoint],
+    ['Vendor ID', String(details.vendorId)],
+    ['POS username', details.name],
+    ['POS password', details.password],
+  ];
+
+  const pre = document.createElement('pre');
+  pre.className = 'text-mono';
+  pre.textContent = rows.map(([label, value]) => `${label}: ${value}`).join('\n');
+  card.appendChild(pre);
+
+  const actions = document.createElement('div');
+  actions.className = 'mt-20';
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'btn btn-primary';
+  copyBtn.textContent = 'Copy Connection Details';
+  copyBtn.addEventListener('click', async () => {
+    await copyText(pre.textContent);
+    alert('Connection details copied.');
+  });
+  actions.appendChild(copyBtn);
+  card.appendChild(actions);
+
+  return card;
 }
 
 function renderSettings(container, headerActions) {
@@ -1346,11 +1412,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const password = $('pos-password-input').value;
 
     try {
-      await createPOS(name, password);
+      const created = await createPOS(name, password);
+      lastCreatedPOSConnection = {
+        backendUrl: window.location.origin,
+        loginEndpoint: window.location.origin + '/auth/login-pos',
+        vendorId: created.vendor_id || auth.vendorId,
+        name,
+        password
+      };
       closeModal('create-pos-modal');
       $('pos-name-input').value = '';
       $('pos-password-input').value = '';
-      alert('POS device "' + escapeHtml(name) + '" created successfully!');
+      alert('POS device "' + name + '" created successfully. Copy the connection details from the POS Devices page.');
       navigateTo('pos');
     } catch (err) {
       alert(err.message);

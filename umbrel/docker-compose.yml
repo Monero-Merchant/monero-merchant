@@ -1,0 +1,112 @@
+services:
+  app_proxy:
+    image: getumbrel/app-proxy:1.7.0@sha256:ec0de0b944a2e63d52fdd82b3760d90a35f8b442d17a8407afdee3af3e842d5a
+    environment:
+      APP_HOST: monero-merchant_backend_1
+      APP_PORT: 8080
+
+  change-vol-ownership:
+    image: alpine:3.20
+    command: "chown -R 1000:1000 /mnt/wallet"
+    volumes:
+      - ${APP_DATA_DIR}/data/wallet:/mnt/wallet
+
+  monero-wallet-rpc:
+    image: ghcr.io/sethforprivacy/simple-monero-wallet-rpc:latest
+    restart: on-failure
+    stop_grace_period: 1m
+    command: >-
+      --wallet-dir wallet
+      --disable-rpc-login
+      --rpc-bind-ip=0.0.0.0
+      --rpc-bind-port=28081
+      --confirm-external-bind
+      --daemon-host=${MONERO_DAEMON_RPC_HOSTNAME:-xmr-node.cakewallet.com}
+      --daemon-port=${MONERO_DAEMON_RPC_PORT:-18081}
+    volumes:
+      - ${APP_DATA_DIR}/data/wallet:/home/monero/wallet
+    depends_on:
+      change-vol-ownership:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail localhost:28081/json_rpc -d '{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_version\"}'"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+
+  moneropay-postgresql:
+    image: postgres:17-alpine
+    restart: on-failure
+    environment:
+      POSTGRES_USER: moneropay
+      POSTGRES_PASSWORD: ${APP_SEED}
+      POSTGRES_DB: moneropay
+    volumes:
+      - ${APP_DATA_DIR}/data/moneropay-postgresql:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U moneropay -d moneropay"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+
+  moneropay:
+    image: registry.gitlab.com/moneropay/moneropay:v2
+    restart: on-failure
+    environment:
+      RPC_ADDRESS: http://monero-wallet-rpc:28081/json_rpc
+      POSTGRESQL: postgresql://moneropay:${APP_SEED}@moneropay-postgresql:5432/moneropay?sslmode=disable
+      ZERO_CONF: ${MONEROPAY_ZERO_CONF:-true}
+    depends_on:
+      monero-wallet-rpc:
+        condition: service_healthy
+      moneropay-postgresql:
+        condition: service_healthy
+
+  backend-db:
+    image: postgres:16-alpine
+    restart: on-failure
+    environment:
+      POSTGRES_USER: moneromerchant
+      POSTGRES_PASSWORD: ${APP_SEED}
+      POSTGRES_DB: moneromerchant
+    volumes:
+      - ${APP_DATA_DIR}/data/backend-postgresql:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U moneromerchant -d moneromerchant"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+
+  backend:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    restart: on-failure
+    stop_grace_period: 1m
+    command: ["/usr/local/bin/umbrel-backend-entrypoint"]
+    environment:
+      ADMIN_NAME: ${ADMIN_NAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      APP_PASSWORD: ${APP_PASSWORD}
+      APP_SEED: ${APP_SEED}
+      DB_HOST: backend-db
+      DB_USER: moneromerchant
+      DB_PASSWORD: ${APP_SEED}
+      DB_NAME: moneromerchant
+      DB_PORT: 5432
+      MONEROPAY_BASE_URL: http://moneropay:5000
+      MONEROPAY_CALLBACK_URL: http://backend:8080/callback/
+      MONERO_DAEMON_RPC_HOSTNAME: ${MONERO_DAEMON_RPC_HOSTNAME:-xmr-node.cakewallet.com}
+      MONERO_DAEMON_RPC_PORT: ${MONERO_DAEMON_RPC_PORT:-18081}
+      MONERO_WALLET_RPC_ENDPOINT: http://monero-wallet-rpc:28081/json_rpc
+      WALLET_NAME: ${WALLET_NAME:-wallet}
+      WALLET_AUTO_REFRESH_PERIOD: 2
+      MONERO_MERCHANT_CONFIG_DIR: /config
+    volumes:
+      - ./backend-entrypoint.sh:/usr/local/bin/umbrel-backend-entrypoint:ro
+      - ${APP_DATA_DIR}/config:/config
+    depends_on:
+      backend-db:
+        condition: service_healthy
+      moneropay:
+        condition: service_started

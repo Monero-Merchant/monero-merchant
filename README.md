@@ -201,6 +201,27 @@ Output APK: `app/build/outputs/apk/debug/app-debug.apk`
 
 > For detailed backend API usage, see [`backend/README.md`](backend/README.md).
 
+## Umbrel one-click app packaging
+
+Umbrel packaging lives in [`umbrel/`](umbrel/) and is isolated from the existing
+VPS/Docker setup. It includes:
+
+- `umbrel-app.yml` with Umbrel UI configuration for daemon RPC, admin
+  credentials, wallet name, and zero-conf mode.
+- `docker-compose.yml` wired for Umbrel's `app_proxy`.
+- persistent wallet, database, and secret paths under `${APP_DATA_DIR}`.
+- a backend entrypoint that generates missing internal secrets on first boot and
+  preserves them for future updates.
+
+Validate the package locally with:
+
+```bash
+APP_DATA_DIR="$(pwd)/.umbrel-test-data" \
+APP_PASSWORD="change-me-in-production" \
+APP_SEED="$(openssl rand -hex 32)" \
+docker compose -f umbrel/docker-compose.yml config
+```
+
 ---
 
 ## Donations

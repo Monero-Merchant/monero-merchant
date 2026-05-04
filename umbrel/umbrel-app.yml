@@ -1,0 +1,60 @@
+manifestVersion: 1
+id: monero-merchant
+category: finance
+name: Monero Merchant
+version: "0.1.0"
+tagline: Self-hosted Monero point of sale backend
+description: >-
+  Monero Merchant is a free and open-source point-of-sale backend for accepting
+  Monero payments. This Umbrel package provides a one-click backend stack with
+  MoneroPay, wallet RPC, PostgreSQL persistence, and a browser admin console so
+  merchants can connect Android POS clients without editing .env files by hand.
+developer: Monero Merchant
+website: https://github.com/Monero-Merchant/monero-merchant
+repo: https://github.com/Monero-Merchant/monero-merchant
+support: https://github.com/Monero-Merchant/monero-merchant/issues
+port: 8080
+path: ""
+defaultUsername: "admin"
+defaultPassword: "$APP_PASSWORD"
+gallery: []
+releaseNotes: ""
+submitter: Monero Merchant
+submission: ""
+user_config:
+  - id: monero_daemon_rpc_hostname
+    name: Monero daemon RPC hostname
+    description: Public or LAN Monero daemon host used by wallet-rpc.
+    type: text
+    default: xmr-node.cakewallet.com
+    env: MONERO_DAEMON_RPC_HOSTNAME
+  - id: monero_daemon_rpc_port
+    name: Monero daemon RPC port
+    description: RPC port for the configured Monero daemon.
+    type: number
+    default: 18081
+    env: MONERO_DAEMON_RPC_PORT
+  - id: admin_name
+    name: Admin username
+    description: Username for the Monero Merchant admin dashboard.
+    type: text
+    default: admin
+    env: ADMIN_NAME
+  - id: admin_password
+    name: Admin password
+    description: Optional custom admin password. Leave blank to use Umbrel's generated app password.
+    type: password
+    default: ""
+    env: ADMIN_PASSWORD
+  - id: wallet_name
+    name: Wallet name
+    description: Wallet file name stored under persistent Umbrel app data.
+    type: text
+    default: wallet
+    env: WALLET_NAME
+  - id: zero_conf
+    name: Enable zero-confirmation payments
+    description: Forward MoneroPay ZERO_CONF=true for fast point-of-sale checkout.
+    type: boolean
+    default: true
+    env: MONEROPAY_ZERO_CONF

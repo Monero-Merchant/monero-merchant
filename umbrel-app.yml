@@ -1,0 +1,62 @@
+manifestVersion: 1
+id: monero-merchant
+name: Monero Merchant
+tagline: Accept Monero payments in your business
+icon: https://raw.githubusercontent.com/Monero-Merchant/monero-merchant/main/icons/mm.png
+category: Finance
+version: "2.1.0"
+port: 8080
+description: >-
+  Monero Merchant is a self-hosted point-of-sale system that lets you accept Monero (XMR) payments. It runs the full stack locally — Monero daemon, wallet RPC, payment processing, backend API, and an Android POS app — giving you complete control over your funds.
+
+
+  Key features:
+  - Self-hosted Monero wallet with full node validation
+  - Web-based admin dashboard for transaction management
+  - Android POS app for in-person payments
+  - QR code checkout for remote payments
+  - Automatic wallet refresh and balance monitoring
+  - Fiat currency display with live exchange rates
+  - Printable receipt support
+developer: Monero Merchant
+website: https://moneromerchant.com
+dependencies: []
+repo: https://github.com/Monero-Merchant/monero-merchant
+support: https://github.com/Monero-Merchant/monero-merchant/issues
+gallery:
+  - 1.jpg
+  - 2.jpg
+  - 3.jpg
+releaseNotes: >-
+  Umbrel 1.0+ native integration. Initial release with full one-click setup.
+  - Replaces manual .env editing with a guided setup form
+  - Auto-generates secrets on first boot
+  - Data persists across app updates and reinstalls
+  - Remote POS clients connect via umbrel.local, Tor, and Tailscale
+path: ""
+defaultUsername: admin
+defaultPassword: $APP_SEED
+torOnly: false
+permissions:
+  - STORAGE_DOWNLOADS
+submitter: Monero Merchant
+submission: ""
+userConfig:
+  - id: MONERO_DAEMON_RPC_HOSTNAME
+    name: Monero Daemon RPC Hostname
+    description: "Public Monero node to sync against. Default is node.monero.world:18081."
+    type: text
+    default: node.monero.world
+    required: true
+  - id: MONERO_DAEMON_RPC_PORT
+    name: Monero Daemon RPC Port
+    description: "Port for the Monero daemon RPC (default: 18081)"
+    type: number
+    default: 18081
+    required: true
+  - id: ADMIN_PASSWORD
+    name: Admin Password
+    description: "Password for the web admin dashboard. Leave blank for auto-generated."
+    type: password
+    default: ""
+    required: false

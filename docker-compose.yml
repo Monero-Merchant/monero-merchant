@@ -6,7 +6,9 @@ services:
     image: alpine
     command: "chown -R 1000: /mnt/wallet"
     volumes:
-      - ./moneropay/data/wallet:/mnt/wallet
+      - ${APP_DATA_DIR}/moneropay/data/wallet:/mnt/wallet
+    networks:
+      - ${APP_NETWORK}
 
   # ------------------------
   # MoneroPay wallet RPC
@@ -18,10 +20,10 @@ services:
       --wallet-dir wallet
       --disable-rpc-login
       --rpc-bind-port=28081
-      --daemon-host=${MONERO_DAEMON_RPC_HOSTNAME}
-      --daemon-port=${MONERO_DAEMON_RPC_PORT}
+      --daemon-host=${MONERO_DAEMON_RPC_HOSTNAME:?Monero daemon hostname required}
+      --daemon-port=${MONERO_DAEMON_RPC_PORT:-18081}
     volumes:
-      - ./moneropay/data/wallet:/home/monero/wallet
+      - ${APP_DATA_DIR}/moneropay/data/wallet:/home/monero/wallet
     depends_on:
       change-vol-ownership:
         condition: service_completed_successfully
@@ -31,6 +33,8 @@ services:
       timeout: 5s
       retries: 10
     restart: unless-stopped
+    networks:
+      - ${APP_NETWORK}
 
   # ------------------------
   # MoneroPay database
@@ -38,17 +42,19 @@ services:
   moneropay-postgresql:
     image: postgres:17-alpine
     environment:
-      POSTGRES_USER: ${MONEROPAY_POSTGRES_USERNAME}
+      POSTGRES_USER: moneropay
       POSTGRES_PASSWORD: ${MONEROPAY_POSTGRES_PASSWORD}
-      POSTGRES_DB: ${MONEROPAY_POSTGRES_DATABASE}
+      POSTGRES_DB: moneropay
     volumes:
-      - ./moneropay/data/postgresql:/var/lib/postgresql/data
+      - ${APP_DATA_DIR}/moneropay/data/postgresql:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${MONEROPAY_POSTGRES_USERNAME}"]
+      test: ["CMD-SHELL", "pg_isready -U moneropay"]
       interval: 5s
       timeout: 5s
       retries: 10
     restart: unless-stopped
+    networks:
+      - ${APP_NETWORK}
 
   # ------------------------
   # MoneroPay
@@ -57,7 +63,7 @@ services:
     image: registry.gitlab.com/moneropay/moneropay:v2
     environment:
       RPC_ADDRESS: http://monero-wallet-rpc:28081/json_rpc
-      POSTGRESQL: postgresql://${MONEROPAY_POSTGRES_USERNAME}:${MONEROPAY_POSTGRES_PASSWORD}@moneropay-postgresql:5432/${MONEROPAY_POSTGRES_DATABASE}?sslmode=disable
+      POSTGRESQL: postgresql://moneropay:${MONEROPAY_POSTGRES_PASSWORD}@moneropay-postgresql:5432/moneropay?sslmode=disable
       ZERO_CONF: "true"
     depends_on:
       monero-wallet-rpc:
@@ -65,8 +71,8 @@ services:
       moneropay-postgresql:
         condition: service_healthy
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:${MONEROPAY_PORT}:5000"
+    networks:
+      - ${APP_NETWORK}
 
   # ------------------------
   # Backend database
@@ -75,18 +81,18 @@ services:
     image: postgres:16
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${DB_USER}
+      POSTGRES_USER: moneromerchant
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
-    ports:
-      - "${BACKEND_DB_PORT}:5432"
+      POSTGRES_DB: moneromerchant
     volumes:
-      - backend_db:/var/lib/postgresql/data
+      - ${APP_DATA_DIR}/backend-db:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      test: ["CMD-SHELL", "pg_isready -U moneromerchant -d moneromerchant"]
       interval: 5s
       timeout: 3s
       retries: 20
+    networks:
+      - ${APP_NETWORK}
 
   # ------------------------
   # Backend API
@@ -101,38 +107,37 @@ services:
       moneropay:
         condition: service_started
     environment:
-      ADMIN_NAME: ${ADMIN_NAME}
+      ADMIN_NAME: admin
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
-      PORT: ${BACKEND_PORT}
+      PORT: "8080"
 
-      DB_HOST: ${DB_HOST}
-      DB_USER: ${DB_USER}
+      DB_HOST: backend-db
+      DB_USER: moneromerchant
       DB_PASSWORD: ${DB_PASSWORD}
-      DB_NAME: ${DB_NAME}
-      DB_PORT: ${DB_PORT}
+      DB_NAME: moneromerchant
+      DB_PORT: "5432"
 
       JWT_SECRET: ${JWT_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       JWT_MONEROPAY_SECRET: ${JWT_MONEROPAY_SECRET}
       JWT_LWS_TOKEN: ${JWT_LWS_TOKEN}
 
-      MONEROPAY_BASE_URL: ${MONEROPAY_BASE_URL}
-      MONEROPAY_CALLBACK_URL: ${MONEROPAY_CALLBACK_URL}
+      MONEROPAY_BASE_URL: http://moneropay:5000
+      MONEROPAY_CALLBACK_URL: http://backend:8080/callback/
 
-      MONERO_DAEMON_RPC_ENDPOINT: ${MONERO_DAEMON_RPC_ENDPOINT}
-      MONERO_WALLET_RPC_ENDPOINT: ${MONERO_WALLET_RPC_ENDPOINT}
-      MONERO_WALLET_RPC_USERNAME: ${MONERO_WALLET_RPC_USERNAME}
-      MONERO_WALLET_RPC_PASSWORD: ${MONERO_WALLET_RPC_PASSWORD}
+      MONERO_DAEMON_RPC_ENDPOINT: http://${MONERO_DAEMON_RPC_HOSTNAME}/json_rpc
+      MONERO_WALLET_RPC_ENDPOINT: http://monero-wallet-rpc:28081/json_rpc
+      MONERO_WALLET_RPC_USERNAME: ${MONERO_WALLET_RPC_USERNAME:-}
+      MONERO_WALLET_RPC_PASSWORD: ${MONERO_WALLET_RPC_PASSWORD:-}
 
-      WALLET_NAME: ${WALLET_NAME}
+      WALLET_NAME: wallet
       WALLET_PASSWORD: ${WALLET_PASSWORD}
-      WALLET_AUTO_REFRESH_PERIOD: ${WALLET_AUTO_REFRESH_PERIOD}
+      WALLET_AUTO_REFRESH_PERIOD: "2"
     volumes:
-      - ./.env:/app/.env:ro
-    ports:
-      - "${BACKEND_PORT}:8080"
+      - ${APP_DATA_DIR}/.env:/app/.env:ro
+    expose:
+      - "8080"
     extra_hosts:
       - "host.docker.internal:host-gateway"
-
-volumes:
-  backend_db:
+    networks:
+      - ${APP_NETWORK}

@@ -15,6 +15,8 @@ by issue #30.
 - `backend-entrypoint.sh` creates a persistent `backend.env` in
   `${APP_DATA_DIR}/config`, generating JWT and wallet secrets from
   `/dev/urandom` on first boot and preserving them across app updates.
+- `/` serves a Monero Merchant home page with service health, POS connection
+  details, and links to the admin console and vendor dashboard.
 - All stateful wallet, database, and secret paths live under `${APP_DATA_DIR}`.
 
 ## Local smoke test

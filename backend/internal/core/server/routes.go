@@ -2,6 +2,9 @@ package server
 
 import (
 	"context"
+	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -74,6 +77,10 @@ func NewRouter(ctx context.Context, cfg *config.Config, db *gorm.DB, rpcClient *
 
 	// Public routes
 	r.Group(func(r chi.Router) {
+		r.Get("/", serveWebFile("index.html"))
+		r.Get("/admin.html", serveWebFile("admin.html"))
+		r.Get("/vendor-dashboard.html", serveWebFile("vendor-dashboard.html"))
+
 		// Auth routes
 		r.Post("/auth/login-admin", authHandler.LoginAdmin)
 		r.Post("/auth/login-vendor", authHandler.LoginVendor)
@@ -125,4 +132,20 @@ func NewRouter(ctx context.Context, cfg *config.Config, db *gorm.DB, rpcClient *
 	})
 
 	return r
+}
+
+func serveWebFile(name string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		for _, path := range []string{
+			filepath.Join("web", name),
+			filepath.Join("/app", "web", name),
+			filepath.Join("backend", "web", name),
+		} {
+			if _, err := os.Stat(path); err == nil {
+				http.ServeFile(w, r, path)
+				return
+			}
+		}
+		http.NotFound(w, r)
+	}
 }

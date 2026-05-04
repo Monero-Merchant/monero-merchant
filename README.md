@@ -212,6 +212,8 @@ VPS/Docker setup. It includes:
 - persistent wallet, database, and secret paths under `${APP_DATA_DIR}`.
 - a backend entrypoint that generates missing internal secrets on first boot and
   preserves them for future updates.
+- a browser home page with health check, POS connection details, admin console,
+  and vendor dashboard links.
 
 Validate the package locally with:
 

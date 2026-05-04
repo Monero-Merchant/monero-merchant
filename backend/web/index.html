@@ -2,379 +2,78 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>XMRpos Vendor/POS API Test Console</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Monero Merchant</title>
   <style>
-    *,*::before,*::after{box-sizing:border-box}
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:24px;max-width:1100px;background:#282A36;color:#F8F8F2}
-    h1,h2{margin:0 0 8px;color:#F8F8F2}
-    .wrap{display:grid;gap:16px}
-    .card{background:#303347;border:1px solid #44475A;border-radius:10px;padding:18px;box-shadow:0 6px 14px rgba(0,0,0,0.25)}
-    .card > * + *{margin-top:16px}
-    label{display:block;margin:0 0 6px;color:#F8F8F2;font-weight:500}
-    input,textarea,button,select{width:100%;padding:10px 12px;font-size:14px;border:1px solid #6272A4;border-radius:6px;background:#44475A;color:#F8F8F2}
-    input:focus,textarea:focus,select:focus{outline:2px solid #8BE9FD;outline-offset:1px}
-    button{background:#6272A4;border:1px solid #6272A4;font-weight:600;cursor:pointer;transition:background 0.2s,border-color 0.2s}
-    button:hover{background:#6f7bc7;border-color:#6f7bc7}
-    textarea{min-height:96px;font-family:ui-monospace,Consolas,monospace}
-    pre{overflow:auto;white-space:pre-wrap;word-wrap:anywhere;background:#21222C;border:1px solid #44475A;padding:12px;border-radius:8px;color:#F8F8F2}
-    .row{display:grid;grid-template-columns:180px 1fr;gap:16px;align-items:center}
-    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-    .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-    .grid2 > div,.grid3 > div{display:flex;flex-direction:column;gap:6px}
-    .ok{color:#50FA7B}
-    .err{color:#FF5555}
-    .muted{color:#6272A4}
-    a{color:#8BE9FD}
-    code{background:#44475A;color:#F8F8F2;border-radius:4px;padding:0 4px}
-    .actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px}
-    .section-title{margin:16px 0 8px;font-size:20px;font-weight:600;color:#F8F8F2}
+    :root{--bg:#1b1d26;--card:#24283b;--muted:#a9b1d6;--text:#f8f8f2;--line:#414868;--accent:#ff6600;--ok:#9ece6a;--err:#f7768e}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:linear-gradient(135deg,#151720,#24283b);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+    main{max-width:1100px;margin:0 auto;padding:40px 20px}
+    header{display:grid;gap:12px;margin-bottom:24px}
+    h1{font-size:40px;margin:0}
+    p{color:var(--muted);line-height:1.55}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+    .card{background:rgba(36,40,59,.94);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .card h2{margin:0 0 8px;font-size:20px}
+    a.button,button{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:12px;padding:12px 14px;border-radius:10px;border:1px solid var(--accent);background:var(--accent);color:white;text-decoration:none;font-weight:700;cursor:pointer}
+    a.secondary{border-color:var(--line);background:#30364d}
+    code,pre{background:#161923;border:1px solid var(--line);border-radius:8px;color:#f8f8f2}
+    code{padding:2px 6px}
+    pre{padding:12px;white-space:pre-wrap;word-break:break-word;min-height:72px}
+    .status{font-weight:700}.ok{color:var(--ok)}.err{color:var(--err)}
   </style>
 </head>
 <body>
-<h1>XMRpos Vendor/POS API Test Console</h1>
-<p class="muted">All requests are proxied to <code>xmr1.twed.org:8080</code>.</p>
+<main>
+  <header>
+    <h1>Monero Merchant</h1>
+    <p>Self-hosted Monero point-of-sale backend for Umbrel. Use this home page to verify service health, open the admin console, and copy connection details for Android POS clients.</p>
+  </header>
 
-<div class="wrap">
-
-  <!-- Health -->
-  <div class="card">
-    <h2>Status</h2>
-    <button id="btn-health">Check Health</button>
-    <pre id="out-health"></pre>
-  </div>
-
-  <!-- Vendor: signup -->
-  <div class="card">
-    <h2>Vendor Signup</h2>
-    <div class="grid2">
-      <div>
-        <label>Username</label><input id="v-name" placeholder="vendor-name" />
-      </div>
-      <div>
-        <label>Password</label><input id="v-pass" type="password" placeholder="" />
-      </div>
+  <section class="grid">
+    <div class="card">
+      <h2>Service status</h2>
+      <p>Checks the backend <code>/misc/health</code> endpoint through the same Umbrel app URL your POS devices use.</p>
+      <button id="check">Check health</button>
+      <pre id="health">Not checked yet.</pre>
     </div>
-    <label>Monero subaddress</label>
-    <textarea id="v-subaddr" placeholder="8A6shd5c..."></textarea>
-    <label>Invite code</label>
-    <input id="v-invite" placeholder="invite code" />
-    <div class="actions">
-      <button id="btn-v-create">Create Account</button>
+    <div class="card">
+      <h2>Admin command center</h2>
+      <p>Login with the Umbrel app username/password, view wallet balance, create vendor invites, list vendors, and trigger transfers.</p>
+      <a class="button" href="/admin.html">Open admin console</a>
     </div>
-    <pre id="out-v-create"></pre>
-  </div>
-
-  <!-- Vendor: login -->
-  <div class="card">
-    <h2>Vendor Login</h2>
-    <div class="grid2">
-      <div><label>Username</label><input id="lv-name" placeholder="" /></div>
-      <div><label>Password</label><input id="lv-pass" type="password" placeholder="" /></div>
+    <div class="card">
+      <h2>Vendor dashboard</h2>
+      <p>Browser dashboard for vendor balance, POS device management, withdrawals, and transaction export.</p>
+      <a class="button secondary" href="/vendor-dashboard.html">Open vendor dashboard</a>
     </div>
-    <button id="btn-v-login">Login</button>
-    <pre id="out-v-auth"></pre>
-  </div>
-
-  <!-- Vendor: balance -->
-  <div class="card">
-    <h2>Vendor Balance</h2>
-    <button id="btn-v-balance">Fetch Balance</button>
-    <pre id="out-v-balance" class="muted"></pre>
-  </div>
-
-  <br />
-  <h2 class="section-title">POS Calls</h2>
-
-  <!-- POS: create under vendor -->
-  <div class="card">
-    <h2>Register POS</h2>
-    <div class="grid2">
-      <div><label>POS name</label><input id="pos-name" placeholder="" /></div>
-      <div><label>POS password</label><input id="pos-pass" type="password" placeholder="" /></div>
+    <div class="card">
+      <h2>POS connection details</h2>
+      <p>Use the current page origin as the backend URL for Android POS clients on LAN, Tor, or Tailscale.</p>
+      <pre id="details"></pre>
     </div>
-    <button id="btn-pos-create">Register</button>
-    <pre id="out-pos-create"></pre>
-  </div>
-
-  <!-- POS: login -->
-  <div class="card">
-    <h2>POS Login</h2>
-    <div class="grid3">
-      <div><label>Vendor ID</label><input id="lp-vendor-id" type="number" placeholder="" /></div>
-      <div><label>POS name</label><input id="lp-name" placeholder="" /></div>
-      <div><label>POS password</label><input id="lp-pass" type="password" placeholder="" /></div>
-    </div>
-    <button id="btn-pos-login">Login</button>
-    <pre id="out-pos-auth"></pre>
-  </div>
-
-  <!-- POS: make transaction -->
-  <div class="card">
-    <h2>Make Transaction</h2>
-    <div class="grid2">
-      <div>
-        <label>Amount (XMR)</label>
-        <input id="tx-amount" type="number" step="0.0001" min="0" placeholder="0.1234" />
-      </div>
-      <div>
-        <label>Description</label>
-        <input id="tx-desc" placeholder="Coffee order" />
-      </div>
-    </div>
-    <button id="btn-pos-create-tx">Create Transaction</button>
-    <pre id="out-pos-create-tx" class="muted"></pre>
-  </div>
-
-  <!-- POS: transaction lookup -->
-  <div class="card">
-    <h2>Lookup Transaction</h2>
-    <div class="row">
-      <label>Transaction ID</label><input id="tx-id" type="number" placeholder="" />
-    </div>
-    <button id="btn-pos-refresh">Refresh POS Token</button>
-    <button id="btn-pos-tx">Get Transaction</button>
-    <pre id="out-pos-tx" class="muted"></pre>
-  </div>
-
-  <!-- POS: export transactions -->
-  <div class="card">
-    <h2>Export Transactions</h2>
-    <p class="muted">Export confirmed transactions as CSV</p>
-    <button id="btn-pos-export">Export</button>
-    <pre id="out-pos-export" class="muted"></pre>
-  </div>
-
-</div>
-
+  </section>
+</main>
 <script>
-const $ = (id)=>document.getElementById(id);
-const pretty = (v)=> typeof v === "string" ? v : JSON.stringify(v, null, 2);
-const showError = (id, err)=>{ $(id).textContent = err?.message || String(err); };
+const details = document.getElementById("details");
+details.textContent = [
+  `Backend URL: ${window.location.origin}`,
+  "Admin username: admin unless changed in Umbrel app config",
+  "Admin password: Umbrel app password unless changed in app config",
+  "Health endpoint: /misc/health"
+].join("\n");
 
-let vendor = { access:null, refresh:null, tokenType:"Bearer" };
-let pos    = { access:null, refresh:null, tokenType:"Bearer" };
-
-const outVendorBalance = $("out-v-balance");
-const txIdInput = $("tx-id");
-const btnPosTx = $("btn-pos-tx");
-const outPosTx = $("out-pos-tx");
-const outPosCreateTx = $("out-pos-create-tx");
-const outPosExport = $("out-pos-export");
-const txAmountInput = $("tx-amount");
-const txDescInput = $("tx-desc");
-const updateTxLabel = ()=>{
-  const raw = txIdInput.value.trim();
-  btnPosTx.textContent = raw ? `Get Transaction #${raw}` : "Get Transaction";
-};
-txIdInput.addEventListener("input", updateTxLabel);
-updateTxLabel();
-
-// --- Health ---
-$("btn-health").onclick = async ()=>{
+document.getElementById("check").onclick = async () => {
+  const out = document.getElementById("health");
+  out.textContent = "Checking...";
   try {
-    const r = await fetch("/misc/health");
-    const ct = r.headers.get("content-type")||"";
-    $("out-health").textContent = pretty(ct.includes("json")? await r.json(): await r.text());
-  } catch (err) {
-    showError("out-health", err);
+    const response = await fetch("/misc/health", {headers: {"accept": "application/json"}});
+    const text = await response.text();
+    out.innerHTML = `<span class="${response.ok ? "ok" : "err"}">HTTP ${response.status}</span>\n${text}`;
+  } catch (error) {
+    out.innerHTML = `<span class="err">Request failed</span>\n${error && error.message ? error.message : String(error)}`;
   }
 };
-
-// --- Vendor create ---
-$("btn-v-create").onclick = async ()=>{
-  const body = {
-    name: $("v-name").value.trim(),
-    password: $("v-pass").value.trim(),
-    monero_subaddress: $("v-subaddr").value.trim(),
-    invite_code: $("v-invite").value.trim()
-  };
-  try {
-    const r = await fetch("/vendor/create", {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify(body)
-    });
-    const out = await r.json().catch(()=> ({}));
-    $("out-v-create").textContent = pretty(out);
-  } catch (err) {
-    showError("out-v-create", err);
-  }
-};
-
-// --- Vendor login ---
-$("btn-v-login").onclick = async ()=>{
-  const body = { name:$("lv-name").value.trim(), password:$("lv-pass").value.trim() };
-  try {
-    const r = await fetch("/auth/login-vendor", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) });
-    const data = await r.json().catch(()=> ({}));
-    vendor.access  = data.access_token || null;
-    vendor.refresh = data.refresh_token || null;
-    vendor.tokenType = data.token_type ? String(data.token_type) : vendor.tokenType;
-    $("out-v-auth").textContent = pretty(data);
-  } catch (err) {
-    showError("out-v-auth", err);
-  }
-};
-
-$("btn-v-balance").onclick = async ()=>{
-  try {
-    const headers = vendor.access ? { Authorization: `${vendor.tokenType} ${vendor.access}` } : {};
-    const r = await fetch("/vendor/balance", { headers });
-    const data = await r.json().catch(()=> ({}));
-    outVendorBalance.textContent = pretty(data);
-    outVendorBalance.classList.remove("muted", "err");
-  } catch (err) {
-    outVendorBalance.classList.remove("muted");
-    outVendorBalance.classList.add("err");
-    showError("out-v-balance", err);
-  }
-};
-
-// --- POS create under vendor ---
-$("btn-pos-create").onclick = async ()=>{
-  const body = { name:$("pos-name").value.trim(), password:$("pos-pass").value.trim() };
-  try {
-    const r = await fetch("/vendor/create-pos", {
-      method:"POST",
-      headers: Object.assign({ "Content-Type":"application/json" }, vendor.access ? { Authorization:`${vendor.tokenType} ${vendor.access}` } : {}),
-      body: JSON.stringify(body)
-    });
-    const data = await r.json().catch(()=> ({}));
-    $("out-pos-create").textContent = pretty(data);
-  } catch (err) {
-    showError("out-pos-create", err);
-  }
-};
-
-// --- POS login / refresh ---
-$("btn-pos-login").onclick = async ()=>{
-  const body = { name:$("lp-name").value.trim(), password:$("lp-pass").value.trim(), vendor_id: Number($("lp-vendor-id").value || 0) };
-  try {
-    const r = await fetch("/auth/login-pos", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) });
-    const data = await r.json().catch(()=> ({}));
-    pos.access  = data.access_token || null;
-    pos.refresh = data.refresh_token || null;
-    pos.tokenType = data.token_type ? String(data.token_type) : pos.tokenType;
-    $("out-pos-auth").textContent = pretty(data);
-  } catch (err) {
-    showError("out-pos-auth", err);
-  }
-};
-
-$("btn-pos-refresh").onclick = async ()=>{
-  if (!pos.refresh) { $("out-pos-auth").textContent = "No POS refresh_token."; return; }
-  try {
-    const r = await fetch("/auth/refresh", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ refresh_token: pos.refresh }) });
-    const data = await r.json().catch(()=> ({}));
-    pos.access  = data.access_token  || pos.access;
-    pos.refresh = data.refresh_token || pos.refresh;
-    pos.tokenType = data.token_type ? String(data.token_type) : pos.tokenType;
-    $("out-pos-auth").textContent = pretty(data);
-  } catch (err) {
-    showError("out-pos-auth", err);
-  }
-};
-
-$("btn-pos-tx").onclick = async ()=>{
-  const raw = txIdInput.value.trim();
-  const id = Number.isFinite(Number(raw)) ? parseInt(raw, 10) : NaN;
-  if (!Number.isInteger(id) || id <= 0) {
-    outPosTx.textContent = "Transaction id must be a positive integer.";
-    outPosTx.classList.remove("muted");
-    outPosTx.classList.add("err");
-    return;
-  }
-  if (!pos.access) {
-    outPosTx.textContent = "POS access token not set. Login POS first.";
-    outPosTx.classList.remove("muted");
-    outPosTx.classList.add("err");
-    return;
-  }
-  try {
-    const r = await fetch(`/pos/transaction/${id}`, { headers: { Authorization:`${pos.tokenType} ${pos.access}` } });
-    const data = await r.json().catch(()=> ({}));
-    outPosTx.textContent = `Status ${r.status}\n${pretty(data)}`;
-    outPosTx.classList.remove("muted", "err");
-    if (!r.ok) {
-      outPosTx.classList.add("err");
-    }
-  } catch (err) {
-    outPosTx.classList.remove("muted");
-    outPosTx.classList.add("err");
-    showError("out-pos-tx", err);
-  }
-};
-
-$("btn-pos-create-tx").onclick = async ()=>{
-  if (!pos.access) {
-    outPosCreateTx.textContent = "POS access token not set. Login POS first.";
-    outPosCreateTx.classList.remove("muted");
-    outPosCreateTx.classList.add("err");
-    return;
-  }
-  const amountXmr = Number(txAmountInput.value);
-  if (!Number.isFinite(amountXmr) || amountXmr <= 0) {
-    outPosCreateTx.textContent = "Enter a valid positive XMR amount.";
-    outPosCreateTx.classList.remove("muted");
-    outPosCreateTx.classList.add("err");
-    return;
-  }
-  const amountAtomic = Math.round(amountXmr * 1e12);
-  const body = {
-    amount: amountAtomic,
-    amount_in_currency: 1,
-    currency: "USD",
-    description: txDescInput.value.trim() || null
-  };
-  try {
-    const r = await fetch("/pos/create-transaction", {
-      method:"POST",
-      headers:{
-        "Content-Type":"application/json",
-        Authorization:`${pos.tokenType} ${pos.access}`
-      },
-      body: JSON.stringify(body)
-    });
-    const data = await r.json().catch(()=> ({}));
-    outPosCreateTx.textContent = `Status ${r.status}\n${pretty(data)}`;
-    outPosCreateTx.classList.remove("muted", "err");
-    if (!r.ok) outPosCreateTx.classList.add("err");
-  } catch (err) {
-    outPosCreateTx.classList.remove("muted");
-    outPosCreateTx.classList.add("err");
-    showError("out-pos-create-tx", err);
-  }
-};
-
-$("btn-pos-export").onclick = async ()=>{
-  if (!pos.access) {
-    outPosExport.textContent = "POS access token not set. Login POS first.";
-    outPosExport.classList.remove("muted", "ok");
-    outPosExport.classList.add("err");
-    return;
-  }
-  try {
-    const r = await fetch("/pos/export", {
-      headers: { Authorization: `${pos.tokenType} ${pos.access}` }
-    });
-    const data = await r.json().catch(()=> ({}));
-    outPosExport.textContent = `Status ${r.status}\n${pretty(data)}`;
-    outPosExport.classList.remove("err", "ok");
-    if (!r.ok) {
-      outPosExport.classList.remove("muted");
-      outPosExport.classList.add("err");
-    } else {
-      outPosExport.classList.remove("muted");
-      outPosExport.classList.add("ok");
-    }
-  } catch (err) {
-    outPosExport.classList.remove("muted", "ok");
-    outPosExport.classList.add("err");
-    showError("out-pos-export", err);
-  }
-};
-
 </script>
 </body>
 </html>

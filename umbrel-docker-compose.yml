@@ -1,0 +1,163 @@
+# Monero Merchant - Umbrel Docker Compose
+# Optimized for Umbrel OS with built-in Tor and storage management
+#
+# This compose file replaces the standard docker-compose.yml when
+# running on Umbrel. It integrates with Umbrel's networking, storage,
+# and Tor infrastructure.
+
+version: '3.8'
+
+services:
+  # ------------------------
+  # MoneroPay wallet RPC
+  # ------------------------
+  monero-wallet-rpc:
+    image: sethforprivacy/simple-monero-wallet-rpc:latest
+    command: >-
+      --wallet-dir /wallet
+      --disable-rpc-login
+      --rpc-bind-port=28081
+      --daemon-host=${MONERO_DAEMON_RPC_HOSTNAME:-xmr-node.cakewallet.com}
+      --daemon-port=${MONERO_DAEMON_RPC_PORT:-18081}
+      --trusted-daemon
+    volumes:
+      - wallet_data:/wallet
+    networks:
+      - umbrel
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail -s localhost:28081/json_rpc -d '{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_version\"}' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  # ------------------------
+  # MoneroPay Database
+  # ------------------------
+  moneropay-postgresql:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: moneropay
+      POSTGRES_PASSWORD: ${MONEROPAY_POSTGRES_PASSWORD:-moneropay_secure_password}
+      POSTGRES_DB: moneropay
+    volumes:
+      - moneropay_pg_data:/var/lib/postgresql/data
+    networks:
+      - umbrel
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U moneropay"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ------------------------
+  # MoneroPay Service
+  # ------------------------
+  moneropay:
+    image: registry.gitlab.com/moneropay/moneropay:v2
+    environment:
+      RPC_ADDRESS: http://monero-wallet-rpc:28081/json_rpc
+      POSTGRESQL: postgresql://moneropay:${MONEROPAY_POSTGRES_PASSWORD:-moneropay_secure_password}@moneropay-postgresql:5432/moneropay?sslmode=disable
+      ZERO_CONF: "true"
+    depends_on:
+      monero-wallet-rpc:
+        condition: service_healthy
+      moneropay-postgresql:
+        condition: service_healthy
+    networks:
+      - umbrel
+    restart: unless-stopped
+
+  # ------------------------
+  # Backend Database
+  # ------------------------
+  backend-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER:-moneromerchant}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-moneromerchant_secure_password}
+      POSTGRES_DB: ${DB_NAME:-moneromerchant}
+    volumes:
+      - backend_pg_data:/var/lib/postgresql/data
+    networks:
+      - umbrel
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U moneromerchant"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ------------------------
+  # Backend API (Go)
+  # ------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      ADMIN_NAME: ${ADMIN_NAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      PORT: "8080"
+      DB_HOST: backend-db
+      DB_USER: ${DB_USER:-moneromerchant}
+      DB_PASSWORD: ${DB_PASSWORD:-moneromerchant_secure_password}
+      DB_NAME: ${DB_NAME:-moneromerchant}
+      DB_PORT: "5432"
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_MONEROPAY_SECRET: ${JWT_MONEROPAY_SECRET}
+      JWT_LWS_TOKEN: ${JWT_LWS_TOKEN}
+      MONEROPAY_BASE_URL: http://moneropay:5000
+      MONEROPAY_CALLBACK_URL: http://backend:8080/callback/
+      MONERO_DAEMON_RPC_ENDPOINT: http://${MONERO_DAEMON_RPC_HOSTNAME:-xmr-node.cakewallet.com}:${MONERO_DAEMON_RPC_PORT:-18081}/json_rpc
+      MONERO_WALLET_RPC_ENDPOINT: http://monero-wallet-rpc:28081/json_rpc
+      WALLET_NAME: ${WALLET_NAME:-wallet}
+      WALLET_PASSWORD: ${WALLET_PASSWORD}
+      WALLET_AUTO_REFRESH_PERIOD: "10"
+      PRIMARY_FIAT_CURRENCY: ${PRIMARY_FIAT_CURRENCY:-USD}
+      COMPANY_NAME: ${COMPANY_NAME:-}
+    volumes:
+      - config_data:/app/config
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    depends_on:
+      backend-db:
+        condition: service_healthy
+      moneropay:
+        condition: service_started
+    networks:
+      - umbrel
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # ------------------------
+  # Admin Dashboard (Web UI)
+  # ------------------------
+  admin-dashboard:
+    build:
+      context: ./admin-dashboard
+      dockerfile: Dockerfile
+    environment:
+      BACKEND_URL: http://backend:8080
+      TOR_ENABLED: ${ENABLE_TOR:-true}
+    ports:
+      - "${DASHBOARD_PORT:-3000}:3000"
+    depends_on:
+      - backend
+    networks:
+      - umbrel
+    restart: unless-stopped
+
+networks:
+  umbrel:
+    driver: bridge
+
+volumes:
+  wallet_data:
+  moneropay_pg_data:
+  backend_pg_data:
+  config_data:

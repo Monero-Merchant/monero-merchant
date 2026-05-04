@@ -1,0 +1,148 @@
+# Monero Merchant - Umbrel App Manifest
+# Provides one-click GUI installation for Umbrel users
+# Bounty: https://bounties.monero.social/posts/231
+
+id: monero-merchant
+name: Monero Merchant
+version: 1.0.0
+description: >
+  Free and Open Source Monero Point of Sale (POS) system.
+  Accept Monero payments with a self-hosted, trustless, and secure solution.
+  Features: Bluetooth receipt printing, multi-POS support, 0-confirmation payments.
+release-notes: |
+  Initial Umbrel integration with web admin dashboard and one-click setup.
+  
+  Features:
+  - Automated wallet creation and configuration
+  - Web-based admin dashboard for store management
+  - Umbrel network integration with Tor support
+  - Health monitoring and auto-restart capabilities
+
+developer: Monero Merchant Community
+url: https://github.com/Monero-Merchant/monero-merchant
+
+dependencies: []
+
+port: 8080
+submitter: jshaofa-ui
+repo: https://github.com/Monero-Merchant/monero-merchant
+support: https://github.com/Monero-Merchant/monero-merchant/issues
+
+# Default admin credentials (shown during setup)
+defaultUsername: admin
+defaultPassword: ""  # Generated during first-launch
+
+# Docker image configuration
+image:
+  build: .
+  context: .
+
+# Category
+category: Finance
+
+# Icon
+icon: https://raw.githubusercontent.com/Monero-Merchant/monero-merchant/main/icons/icon.png
+
+# Description for Umbrel App Store
+tagline: Accept Monero payments with a self-hosted POS system
+description: >
+  Monero Merchant is a free, open-source Point of Sale system for accepting
+  Monero (XMR) payments. Designed for merchants who value privacy and
+  self-sovereignty.
+  
+  Key Features:
+  • Trustless architecture - operate your own backend
+  • Device-agnostic - works on any Android device
+  • Bluetooth ESC/POS receipt printing
+  • Unlimited POS clients and vendors
+  • Secure - no wallet keys on client devices
+  • Fast 0-confirmation payments (5-10 seconds)
+  • Web admin dashboard for configuration
+  • Tor support via Umbrel's built-in Tor
+  
+  Perfect for retail stores, cafes, markets, and any business accepting
+  Monero payments.
+
+# User configuration for Umbrel UI
+userConfig:
+  - id: ADMIN_NAME
+    type: text
+    name: Admin Username
+    description: Username for the admin dashboard
+    default: admin
+    required: true
+    
+  - id: ADMIN_PASSWORD
+    type: password
+    name: Admin Password
+    description: Password for the admin dashboard (min 8 characters)
+    placeholder: Enter a strong password
+    required: true
+    minLength: 8
+    
+  - id: MONERO_DAEMON_RPC_HOSTNAME
+    type: text
+    name: Monero Daemon RPC Host
+    description: Monero node RPC hostname (use public node or run your own)
+    default: xmr-node.cakewallet.com
+    required: true
+    
+  - id: MONERO_DAEMON_RPC_PORT
+    type: number
+    name: Monero Daemon RPC Port
+    description: Port for Monero daemon RPC
+    default: 18081
+    min: 1
+    max: 65535
+    required: true
+    
+  - id: PRIMARY_FIAT_CURRENCY
+    type: select
+    name: Primary Fiat Currency
+    description: Currency for displaying prices
+    options:
+      - label: USD - US Dollar
+        value: USD
+      - label: EUR - Euro
+        value: EUR
+      - label: GBP - British Pound
+        value: GBP
+      - label: JPY - Japanese Yen
+        value: JPY
+      - label: CAD - Canadian Dollar
+        value: CAD
+      - label: AUD - Australian Dollar
+        value: AUD
+      - label: CHF - Swiss Franc
+        value: CHF
+      - label: CNY - Chinese Yuan
+        value: CNY
+    default: USD
+    required: true
+    
+  - id: COMPANY_NAME
+    type: text
+    name: Company / Store Name
+    description: Displayed on receipts and dashboard
+    placeholder: My Store
+    required: false
+    
+  - id: ENABLE_TOR
+    type: checkbox
+    name: Enable Tor Access
+    description: Allow access via Tor (recommended for privacy)
+    default: true
+
+# Permissions
+permissions:
+  - storage
+  - network
+
+# Storage paths
+storage:
+  - mount: /data/wallet
+    description: Monero wallet data
+  - mount: /data/postgresql
+    description: PostgreSQL database
+  - mount: /data/config
+    description: Configuration files

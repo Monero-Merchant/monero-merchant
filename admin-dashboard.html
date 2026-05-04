@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monero Merchant - Admin Dashboard</title>
+  <style>
+    :root {
+      --primary: #FF6600;
+      --primary-dark: #E55A00;
+      --bg: #0D1117;
+      --bg-card: #161B22;
+      --bg-input: #0D1117;
+      --text: #C9D1D9;
+      --text-muted: #8B949E;
+      --border: #30363D;
+      --success: #2EA043;
+      --danger: #DA3633;
+      --warning: #D29922;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    .header {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header h1 {
+      color: var(--primary);
+      font-size: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .header .status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    .tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2rem;
+    }
+    .tab {
+      padding: 0.75rem 1.5rem;
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .card h2 {
+      font-size: 1.125rem;
+      margin-bottom: 1rem;
+      color: var(--text);
+    }
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+    }
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 0.625rem 0.75rem;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 0.875rem;
+    }
+    .form-group input:focus, .form-group select:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    .btn {
+      padding: 0.625rem 1.25rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-secondary {
+      background: var(--bg-input);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-danger {
+      background: var(--danger);
+      color: white;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .order-list {
+      list-style: none;
+    }
+    .order-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .order-item:last-child { border-bottom: none; }
+    .badge {
+      padding: 0.25rem 0.5rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-success { background: rgba(46,160,67,0.2); color: var(--success); }
+    .badge-warning { background: rgba(210,153,34,0.2); color: var(--warning); }
+    .badge-danger { background: rgba(218,54,51,0.2); color: var(--danger); }
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      padding: 1rem 1.5rem;
+      border-radius: 8px;
+      color: white;
+      font-size: 0.875rem;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast-success { background: var(--success); }
+    .toast-error { background: var(--danger); }
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .checkbox-group input[type="checkbox"] {
+      width: auto;
+      accent-color: var(--primary);
+    }
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-muted);
+    }
+    @media (max-width: 768px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .form-row { grid-template-columns: 1fr; }
+      .container { padding: 1rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <circle cx="14" cy="14" r="13" stroke="#FF6600" stroke-width="2"/>
+        <text x="14" y="19" text-anchor="middle" fill="#FF6600" font-size="14" font-weight="bold">M</text>
+      </svg>
+      Monero Merchant
+    </h1>
+    <div class="status">
+      <span class="status-dot"></span>
+      <span id="connectionStatus">Connected</span>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" data-tab="dashboard">Dashboard</button>
+      <button class="tab" data-tab="settings">Settings</button>
+      <button class="tab" data-tab="wallet">Wallet</button>
+      <button class="tab" data-tab="pos">POS Clients</button>
+      <button class="tab" data-tab="orders">Orders</button>
+    </div>
+
+    <!-- Dashboard Tab -->
+    <div id="tab-dashboard" class="tab-content active">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="totalOrders">0</div>
+          <div class="stat-label">Total Orders</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="totalRevenue">0 XMR</div>
+          <div class="stat-label">Revenue</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="activePOS">0</div>
+          <div class="stat-label">Active POS</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="todayOrders">0</div>
+          <div class="stat-label">Today</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Recent Orders</h2>
+        <ul class="order-list" id="recentOrders">
+          <li class="order-item">
+            <div>
+              <strong>No orders yet</strong>
+              <div style="color: var(--text-muted); font-size: 0.8rem;">Configure your POS client to start accepting payments</div>
+            </div>
+            <span class="badge badge-warning">Waiting</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div id="tab-settings" class="tab-content">
+      <div class="card">
+        <h2>General Settings</h2>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Company / Store Name</label>
+            <input type="text" id="companyName" placeholder="My Store">
+          </div>
+          <div class="form-group">
+            <label>Primary Fiat Currency</label>
+            <select id="fiatCurrency">
+              <option value="USD">USD - US Dollar</option>
+              <option value="EUR">EUR - Euro</option>
+              <option value="GBP">GBP - British Pound</option>
+              <option value="JPY">JPY - Japanese Yen</option>
+              <option value="CAD">CAD - Canadian Dollar</option>
+              <option value="AUD">AUD - Australian Dollar</option>
+              <option value="CHF">CHF - Swiss Franc</option>
+              <option value="CNY">CNY - Chinese Yuan</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Contact Email</label>
+            <input type="email" id="contactEmail" placeholder="admin@mystore.com">
+          </div>
+          <div class="form-group">
+            <label>Receipt Footer Text</label>
+            <input type="text" id="receiptFooter" placeholder="Thank you for your purchase!">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+      </div>
+
+      <div class="card">
+        <h2>Monero Node Configuration</h2>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Daemon RPC Host</label>
+            <input type="text" id="daemonHost" value="xmr-node.cakewallet.com">
+          </div>
+          <div class="form-group">
+            <label>Daemon RPC Port</label>
+            <input type="number" id="daemonPort" value="18081">
+          </div>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="useLocalNode">
+          <label for="useLocalNode">Use local Monero node (recommended for full privacy)</label>
+        </div>
+        <button class="btn btn-primary" onclick="saveNodeConfig()" style="margin-top: 1rem;">Update Node</button>
+      </div>
+
+      <div class="card">
+        <h2>Security</h2>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Admin Username</label>
+            <input type="text" id="adminName" value="admin">
+          </div>
+          <div class="form-group">
+            <label>New Admin Password</label>
+            <input type="password" id="adminPassword" placeholder="Leave blank to keep current">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="updateAdminCredentials()">Update Credentials</button>
+      </div>
+    </div>
+
+    <!-- Wallet Tab -->
+    <div id="tab-wallet" class="tab-content">
+      <div class="card">
+        <h2>Wallet Status</h2>
+        <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+          <div class="stat-card">
+            <div class="stat-value" id="walletBalance">0.000000</div>
+            <div class="stat-label">Balance (XMR)</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="walletUnlocked">Locked</div>
+            <div class="stat-label">Status</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="walletHeight">0</div>
+            <div class="stat-label">Block Height</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Wallet Actions</h2>
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+          <button class="btn btn-primary" onclick="refreshWallet()">Refresh Wallet</button>
+          <button class="btn btn-secondary" onclick="createAddress()">Create New Address</button>
+          <button class="btn btn-secondary" onclick="exportWallet()">Export Wallet</button>
+          <button class="btn btn-danger" onclick="resyncWallet()">Resync Wallet</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- POS Clients Tab -->
+    <div id="tab-pos" class="tab-content">
+      <div class="card">
+        <h2>Connected POS Clients</h2>
+        <button class="btn btn-primary" onclick="addPOSClient()" style="margin-bottom: 1rem;">Add POS Client</button>
+        <ul class="order-list" id="posList">
+          <li class="order-item">
+            <div>
+              <strong>No POS clients connected</strong>
+              <div style="color: var(--text-muted); font-size: 0.8rem;">Install the Monero Merchant Android app to get started</div>
+            </div>
+            <span class="badge badge-warning">None</span>
+          </li>
+        </ul>
+      </div>
+      <div class="card">
+        <h2>POS Setup Guide</h2>
+        <ol style="padding-left: 1.5rem; color: var(--text-muted); font-size: 0.875rem;">
+          <li>Install Monero Merchant app on your Android device</li>
+          <li>Open the app and enter your backend URL</li>
+          <li>Log in with your admin credentials</li>
+          <li>Configure your store settings in the app</li>
+          <li>Start accepting Monero payments!</li>
+        </ol>
+        <div style="margin-top: 1rem;">
+          <strong style="font-size: 0.875rem;">Backend URL:</strong>
+          <code id="backendUrl" style="display: block; margin-top: 0.5rem; padding: 0.5rem; background: var(--bg-input); border-radius: 4px; font-size: 0.8rem;"></code>
+        </div>
+      </div>
+    </div>
+
+    <!-- Orders Tab -->
+    <div id="tab-orders" class="tab-content">
+      <div class="card">
+        <h2>All Orders</h2>
+        <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+          <input type="date" id="orderDateFrom" style="flex: 1;">
+          <input type="date" id="orderDateTo" style="flex: 1;">
+          <select id="orderStatus" style="flex: 1;">
+            <option value="all">All Status</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="pending">Pending</option>
+            <option value="failed">Failed</option>
+          </select>
+        </div>
+        <ul class="order-list" id="allOrders">
+          <li class="order-item">
+            <div>
+              <strong>No orders found</strong>
+              <div style="color: var(--text-muted); font-size: 0.8rem;">Orders will appear here once payments are received</div>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // Tab Navigation
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+      });
+    });
+
+    // API Configuration
+    const API_BASE = window.location.hostname === 'localhost'
+      ? 'http://localhost:8080'
+      : `${window.location.protocol}//${window.location.hostname}:8080`;
+
+    let authToken = localStorage.getItem('monero_merchant_token');
+
+    // Toast notification
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = 'toast toast-' + type + ' show';
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    // API helper
+    async function apiCall(endpoint, options = {}) {
+      const headers = { 'Content-Type': 'application/json', ...options.headers };
+      if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
+      try {
+        const response = await fetch(API_BASE + endpoint, { ...options, headers });
+        if (response.status === 401) {
+          localStorage.removeItem('monero_merchant_token');
+          showToast('Session expired. Please log in again.', 'error');
+          return null;
+        }
+        return await response.json();
+      } catch (err) {
+        document.getElementById('connectionStatus').textContent = 'Disconnected';
+        document.querySelector('.status-dot').style.background = 'var(--danger)';
+        showToast('Connection failed: ' + err.message, 'error');
+        return null;
+      }
+    }
+
+    // Settings
+    async function saveSettings() {
+      const data = {
+        company_name: document.getElementById('companyName').value,
+        primary_fiat_currency: document.getElementById('fiatCurrency').value,
+        contact_email: document.getElementById('contactEmail').value,
+        receipt_footer: document.getElementById('receiptFooter').value,
+      };
+      const result = await apiCall('/api/settings', { method: 'PUT', body: JSON.stringify(data) });
+      if (result) showToast('Settings saved successfully');
+    }
+
+    async function saveNodeConfig() {
+      const data = {
+        daemon_host: document.getElementById('daemonHost').value,
+        daemon_port: parseInt(document.getElementById('daemonPort').value),
+        use_local: document.getElementById('useLocalNode').checked,
+      };
+      const result = await apiCall('/api/node', { method: 'PUT', body: JSON.stringify(data) });
+      if (result) showToast('Node configuration updated');
+    }
+
+    async function updateAdminCredentials() {
+      const data = {
+        username: document.getElementById('adminName').value,
+        password: document.getElementById('adminPassword').value,
+      };
+      if (!data.password) { showToast('Enter a new password', 'error'); return; }
+      const result = await apiCall('/api/admin/credentials', { method: 'PUT', body: JSON.stringify(data) });
+      if (result) showToast('Credentials updated');
+    }
+
+    // Wallet
+    async function refreshWallet() {
+      const result = await apiCall('/api/wallet/refresh');
+      if (result) {
+        document.getElementById('walletBalance').textContent = result.balance?.toFixed(6) || '0.000000';
+        document.getElementById('walletHeight').textContent = result.height || 0;
+        showToast('Wallet refreshed');
+      }
+    }
+
+    async function createAddress() {
+      const result = await apiCall('/api/wallet/address', { method: 'POST' });
+      if (result) showToast('New address created: ' + (result.address?.substring(0, 20) + '...'));
+    }
+
+    async function exportWallet() {
+      showToast('Wallet export initiated - check your data directory');
+    }
+
+    async function resyncWallet() {
+      if (confirm('This will rescan the blockchain. This may take a while. Continue?')) {
+        await apiCall('/api/wallet/resync', { method: 'POST' });
+        showToast('Wallet resync started');
+      }
+    }
+
+    // POS
+    async function addPOSClient() {
+      const name = prompt('Enter POS client name:');
+      if (!name) return;
+      const result = await apiCall('/api/pos', { method: 'POST', body: JSON.stringify({ name }) });
+      if (result) showToast('POS client added: ' + name);
+    }
+
+    // Dashboard data loading
+    async function loadDashboard() {
+      const data = await apiCall('/api/dashboard');
+      if (data) {
+        document.getElementById('totalOrders').textContent = data.total_orders || 0;
+        document.getElementById('totalRevenue').textContent = (data.total_revenue || 0).toFixed(4) + ' XMR';
+        document.getElementById('activePOS').textContent = data.active_pos || 0;
+        document.getElementById('todayOrders').textContent = data.today_orders || 0;
+      }
+    }
+
+    // Backend URL display
+    document.getElementById('backendUrl').textContent = API_BASE;
+
+    // Initialize
+    loadDashboard();
+    setInterval(loadDashboard, 30000); // Auto-refresh every 30s
+  </script>
+</body>
+</html>

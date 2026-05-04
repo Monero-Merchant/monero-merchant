@@ -222,6 +222,12 @@ APP_SEED="$(openssl rand -hex 32)" \
 docker compose -f umbrel/docker-compose.yml config
 ```
 
+Reviewers can also test through Umbrel's Community App Store flow by adding:
+
+```text
+https://github.com/ryriigh/monero-merchant-umbrel-store
+```
+
 ---
 
 ## Donations

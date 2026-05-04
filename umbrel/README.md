@@ -28,6 +28,19 @@ APP_SEED="$(openssl rand -hex 32)" \
 docker compose -f umbrel/docker-compose.yml config
 ```
 
+## Community App Store test URL
+
+For reviewers who want to test installation through Umbrel's Community App Store
+flow, add this store URL in umbrelOS:
+
+```text
+https://github.com/ryriigh/monero-merchant-umbrel-store
+```
+
+The community-store copy uses app id `ryriigh-monero-merchant` because Umbrel
+requires community app IDs to be prefixed by the store id. It otherwise mirrors
+this PR's app package and points back to this PR as the submission source.
+
 On an Umbrel device, the UI is served through the app proxy on port `8080`.
 Remote Android POS clients should use the backend URL shown by Umbrel, e.g.
 `http://umbrel.local` on LAN or the app's Tor/Tailscale URL when those remote

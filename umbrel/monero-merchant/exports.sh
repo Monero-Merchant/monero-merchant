@@ -1,0 +1,2 @@
+export APP_MONERO_MERCHANT_URL="http://${DEVICE_DOMAIN_NAME}:8080"
+export APP_MONERO_MERCHANT_TOR_URL="http://${APP_HIDDEN_SERVICE:-not-enabled.onion}"

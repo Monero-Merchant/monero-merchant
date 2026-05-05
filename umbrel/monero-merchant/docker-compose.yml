@@ -1,0 +1,141 @@
+services:
+  app_proxy:
+    environment:
+      APP_HOST: 10.21.42.10
+      APP_PORT: 8080
+      PROXY_AUTH_WHITELIST: "/auth/login-pos,/auth/refresh,/misc/health,/callback/*,/receive/*,/pos/create-transaction,/pos/transaction/*,/pos/transactions,/pos/balance,/pos/ws/transaction"
+
+  web:
+    image: nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
+    container_name: monero-merchant_web_1
+    restart: unless-stopped
+    volumes:
+      - ./www:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      backend:
+        condition: service_started
+    networks:
+      default:
+        ipv4_address: 10.21.42.10
+
+  fix-wallet-permissions:
+    image: alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc
+    container_name: monero-merchant_fix-wallet-permissions_1
+    command: "chown -R 1000:1000 /mnt/wallet"
+    volumes:
+      - ${APP_DATA_DIR}/data/wallet:/mnt/wallet
+    networks:
+      - wallet
+
+  monero-wallet-rpc:
+    image: sethsimmons/simple-monero-wallet-rpc:latest@sha256:13fd4f6914b15ad34239a9dbc5a5c599b9adad38af803353854052318830ec67
+    container_name: monero-merchant_monero-wallet-rpc_1
+    restart: unless-stopped
+    env_file:
+      - ${APP_DATA_DIR}/data/backend.env
+      - ${APP_DATA_DIR}/data/backend.secrets.env
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - >-
+        set -- /entrypoint.sh
+        --wallet-dir=wallet
+        --rpc-login="$${MONERO_WALLET_RPC_USERNAME}:$${MONERO_WALLET_RPC_PASSWORD}"
+        --rpc-bind-port=28081
+        --daemon-host="$${MONERO_DAEMON_RPC_HOSTNAME}"
+        --daemon-port="$${MONERO_DAEMON_RPC_PORT}"
+        --no-initial-sync;
+        if [ -n "$${MONERO_DAEMON_RPC_USERNAME}" ] || [ -n "$${MONERO_DAEMON_RPC_PASSWORD}" ]; then
+          set -- "$$@" "--daemon-login=$${MONERO_DAEMON_RPC_USERNAME}:$${MONERO_DAEMON_RPC_PASSWORD}";
+        fi;
+        exec "$$@"
+    volumes:
+      - ${APP_DATA_DIR}/data/wallet:/home/monero/wallet
+    depends_on:
+      fix-wallet-permissions:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "curl --digest -u \"$${MONERO_WALLET_RPC_USERNAME}:$${MONERO_WALLET_RPC_PASSWORD}\" --fail localhost:28081/json_rpc -d '{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_version\"}'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks:
+      - wallet
+
+  moneropay-postgresql:
+    image: postgres:17-alpine@sha256:c7526c0f6c3f30260a563d7bcf8ad778effac59a44f8ffa86678c35418338609
+    container_name: monero-merchant_moneropay-postgresql_1
+    restart: unless-stopped
+    env_file:
+      - ${APP_DATA_DIR}/data/moneropay-db.env
+    volumes:
+      - ${APP_DATA_DIR}/data/moneropay-postgresql:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks:
+      - moneropay
+
+  moneropay:
+    image: registry.gitlab.com/moneropay/moneropay:v2@sha256:1b47e0d50635beb66c356d81028883bd5a47a7f829a2ab254046cd2342da73d4
+    container_name: monero-merchant_moneropay_1
+    restart: unless-stopped
+    env_file:
+      - ${APP_DATA_DIR}/data/moneropay.env
+    depends_on:
+      monero-wallet-rpc:
+        condition: service_healthy
+      moneropay-postgresql:
+        condition: service_healthy
+    networks:
+      - moneropay
+      - wallet
+
+  backend-db:
+    image: postgres:16@sha256:71e27bf60b70bded003791b5573f8b808365613f341df20ffcf0c1ed7bc13ddf
+    container_name: monero-merchant_backend-db_1
+    restart: unless-stopped
+    env_file:
+      - ${APP_DATA_DIR}/data/backend-db.env
+    volumes:
+      - ${APP_DATA_DIR}/data/backend-postgresql:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks:
+      - backend-db
+
+  backend:
+    image: ghcr.io/djuricx01/monero-merchant-backend:umbrel@sha256:f69bf803264b80d3933e6033b3d374db00575db010292bddca53a702db95283d
+    container_name: monero-merchant_backend_1
+    restart: unless-stopped
+    env_file:
+      - ${APP_DATA_DIR}/data/backend.env
+      - ${APP_DATA_DIR}/data/backend.secrets.env
+    environment:
+      MONERO_MERCHANT_CONFIG_FILE: /data/backend.env
+      MONERO_MERCHANT_SECRETS_FILE: /data/backend.secrets.env
+    volumes:
+      - ${APP_DATA_DIR}/data/backend.env:/data/backend.env:ro
+      - ${APP_DATA_DIR}/data/backend.secrets.env:/data/backend.secrets.env:ro
+      - ${APP_DATA_DIR}/data/backend.env:/app/.env:ro
+    depends_on:
+      backend-db:
+        condition: service_healthy
+      moneropay:
+        condition: service_started
+    networks:
+      default:
+      backend-db:
+      moneropay:
+      wallet:
+
+networks:
+  backend-db:
+  moneropay:
+  wallet:

@@ -1,0 +1,226 @@
+#!/usr/bin/env sh
+set -eu
+
+APP_DIR="${APP_DATA_DIR:-$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)}"
+DATA_DIR="${APP_DIR}/data"
+
+mkdir -p "${DATA_DIR}" \
+  "${DATA_DIR}/wallet" \
+  "${DATA_DIR}/backend-postgresql" \
+  "${DATA_DIR}/moneropay-postgresql"
+
+rand_hex() {
+  bytes="${1:-32}"
+  if command -v openssl >/dev/null 2>&1; then
+    openssl rand -hex "${bytes}"
+  else
+    dd if=/dev/urandom bs="${bytes}" count=1 2>/dev/null | od -An -tx1 | tr -d ' \n'
+  fi
+}
+
+write_env() {
+  file="$1"
+  shift
+  tmp="${file}.tmp"
+  : > "${tmp}"
+  chmod 600 "${tmp}"
+  for line in "$@"; do
+    key="${line%%=*}"
+    value="${line#*=}"
+    printf '%s=%s\n' "${key}" "$(format_env_value "${value}")" >> "${tmp}"
+  done
+  mv "${tmp}" "${file}"
+  chmod 600 "${file}"
+}
+
+format_env_value() {
+  value="$1"
+  escaped="$(printf '%s' "${value}" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/\$/\\$/g')"
+  printf '"%s"' "${escaped}"
+}
+
+secret_or_random() {
+  file="$1"
+  legacy_file="$2"
+  key="$3"
+  bytes="${4:-32}"
+  existing="$(read_env_value "${file}" "${key}")"
+  if [ -n "${existing}" ]; then
+    printf '%s' "${existing}"
+    return
+  fi
+  existing="$(read_env_value "${legacy_file}" "${key}")"
+  if [ -n "${existing}" ]; then
+    printf '%s' "${existing}"
+    return
+  fi
+  rand_hex "${bytes}"
+}
+
+read_env_value() {
+  file="$1"
+  key="$2"
+  if [ -f "${file}" ]; then
+    value="$(grep -E "^${key}=" "${file}" | tail -n 1 | cut -d= -f2- || true)"
+    if [ -n "${value}" ]; then
+      decode_env_value "${value}"
+      return
+    fi
+  fi
+  return 0
+}
+
+decode_env_value() {
+  value="$1"
+  case "${value}" in
+    \"*\")
+      value="${value#\"}"
+      value="${value%\"}"
+      awk 'BEGIN {
+        s = ARGV[1]
+        ARGV[1] = ""
+        for (i = 1; i <= length(s); i++) {
+          c = substr(s, i, 1)
+          if (c == "\\") {
+            i++
+            if (i > length(s)) {
+              out = out "\\"
+              break
+            }
+            out = out substr(s, i, 1)
+          } else {
+            out = out c
+          }
+        }
+        printf "%s", out
+      }' "${value}"
+      ;;
+    \'*\')
+      value="${value#\'}"
+      value="${value%\'}"
+      printf '%s' "${value}" | sed "s/\\\\'/'/g"
+      ;;
+    *)
+      printf '%s' "${value}"
+      ;;
+  esac
+}
+
+configured_or_stored() {
+  configured="$1"
+  file="$2"
+  key="$3"
+  default_value="${4:-}"
+  if [ -n "${configured}" ]; then
+    printf '%s' "${configured}"
+    return
+  fi
+  existing="$(read_env_value "${file}" "${key}")"
+  if [ -n "${existing}" ]; then
+    printf '%s' "${existing}"
+    return
+  fi
+  printf '%s' "${default_value}"
+}
+
+configured_or_stored_legacy() {
+  configured="$1"
+  file="$2"
+  legacy_file="$3"
+  key="$4"
+  default_value="${5:-}"
+  if [ -n "${configured}" ]; then
+    printf '%s' "${configured}"
+    return
+  fi
+  existing="$(read_env_value "${file}" "${key}")"
+  if [ -n "${existing}" ]; then
+    printf '%s' "${existing}"
+    return
+  fi
+  existing="$(read_env_value "${legacy_file}" "${key}")"
+  if [ -n "${existing}" ]; then
+    printf '%s' "${existing}"
+    return
+  fi
+  printf '%s' "${default_value}"
+}
+
+BACKEND_ENV="${DATA_DIR}/backend.env"
+BACKEND_SECRETS_ENV="${DATA_DIR}/backend.secrets.env"
+BACKEND_DB_ENV="${DATA_DIR}/backend-db.env"
+MONEROPAY_ENV="${DATA_DIR}/moneropay.env"
+MONEROPAY_DB_ENV="${DATA_DIR}/moneropay-db.env"
+
+admin_name="$(configured_or_stored "${ADMIN_NAME:-}" "${BACKEND_ENV}" ADMIN_NAME "admin")"
+# APP_PASSWORD seeds the first admin login; backend.env wins on later starts.
+admin_password="$(configured_or_stored "${ADMIN_PASSWORD:-}" "${BACKEND_ENV}" ADMIN_PASSWORD "${APP_PASSWORD:-$(rand_hex 16)}")"
+backend_db_password="$(secret_or_random "${BACKEND_SECRETS_ENV}" "${BACKEND_ENV}" DB_PASSWORD 24)"
+moneropay_db_password="$(secret_or_random "${BACKEND_SECRETS_ENV}" "${BACKEND_ENV}" MONEROPAY_POSTGRES_PASSWORD 24)"
+jwt_secret="$(secret_or_random "${BACKEND_SECRETS_ENV}" "${BACKEND_ENV}" JWT_SECRET 32)"
+jwt_refresh_secret="$(secret_or_random "${BACKEND_SECRETS_ENV}" "${BACKEND_ENV}" JWT_REFRESH_SECRET 32)"
+jwt_moneropay_secret="$(secret_or_random "${BACKEND_SECRETS_ENV}" "${BACKEND_ENV}" JWT_MONEROPAY_SECRET 32)"
+jwt_lws_token="$(secret_or_random "${BACKEND_SECRETS_ENV}" "${BACKEND_ENV}" JWT_LWS_TOKEN 32)"
+wallet_password="$(secret_or_random "${BACKEND_SECRETS_ENV}" "${BACKEND_ENV}" WALLET_PASSWORD 24)"
+wallet_rpc_username="$(configured_or_stored "${MONERO_WALLET_RPC_USERNAME:-}" "${BACKEND_ENV}" MONERO_WALLET_RPC_USERNAME "moneromerchant")"
+wallet_rpc_password="$(configured_or_stored_legacy "${MONERO_WALLET_RPC_PASSWORD:-}" "${BACKEND_SECRETS_ENV}" "${BACKEND_ENV}" MONERO_WALLET_RPC_PASSWORD "$(rand_hex 24)")"
+wallet_name="$(configured_or_stored "${WALLET_NAME:-}" "${BACKEND_ENV}" WALLET_NAME "wallet")"
+
+daemon_host="$(configured_or_stored "${MONERO_DAEMON_RPC_HOSTNAME:-}" "${BACKEND_ENV}" MONERO_DAEMON_RPC_HOSTNAME "xmr-node.cakewallet.com")"
+daemon_port="$(configured_or_stored "${MONERO_DAEMON_RPC_PORT:-}" "${BACKEND_ENV}" MONERO_DAEMON_RPC_PORT "18081")"
+daemon_user="$(configured_or_stored "${MONERO_DAEMON_RPC_USERNAME:-}" "${BACKEND_ENV}" MONERO_DAEMON_RPC_USERNAME "")"
+daemon_pass="$(configured_or_stored "${MONERO_DAEMON_RPC_PASSWORD:-}" "${BACKEND_ENV}" MONERO_DAEMON_RPC_PASSWORD "")"
+daemon_endpoint="$(configured_or_stored "${MONERO_DAEMON_RPC_ENDPOINT:-}" "${BACKEND_ENV}" MONERO_DAEMON_RPC_ENDPOINT "")"
+if [ -z "${daemon_endpoint}" ] && [ -n "${daemon_host}" ]; then
+  daemon_endpoint="http://${daemon_host}:${daemon_port}/json_rpc"
+fi
+wallet_rpc_endpoint="$(configured_or_stored "${MONERO_WALLET_RPC_ENDPOINT:-}" "${BACKEND_ENV}" MONERO_WALLET_RPC_ENDPOINT "http://monero-wallet-rpc:28081/json_rpc")"
+
+write_env "${BACKEND_ENV}" \
+  "ADMIN_NAME=${admin_name}" \
+  "ADMIN_PASSWORD=${admin_password}" \
+  "PORT=8080" \
+  "DB_HOST=backend-db" \
+  "DB_USER=moneromerchant" \
+  "DB_NAME=moneromerchant" \
+  "DB_PORT=5432" \
+  "MONEROPAY_BASE_URL=http://moneropay:5000" \
+  "MONEROPAY_CALLBACK_URL=http://backend:8080/callback/" \
+  "MONERO_DAEMON_RPC_HOSTNAME=${daemon_host}" \
+  "MONERO_DAEMON_RPC_PORT=${daemon_port}" \
+  "MONERO_DAEMON_RPC_USERNAME=${daemon_user}" \
+  "MONERO_DAEMON_RPC_PASSWORD=${daemon_pass}" \
+  "MONERO_DAEMON_RPC_ENDPOINT=${daemon_endpoint}" \
+  "MONERO_WALLET_RPC_ENDPOINT=${wallet_rpc_endpoint}" \
+  "MONERO_WALLET_RPC_USERNAME=${wallet_rpc_username}" \
+  "WALLET_NAME=${wallet_name}" \
+  "WALLET_AUTO_REFRESH_PERIOD=2" \
+  "MONEROPAY_POSTGRES_USERNAME=moneropay" \
+  "MONEROPAY_POSTGRES_DATABASE=moneropay"
+
+write_env "${BACKEND_SECRETS_ENV}" \
+  "DB_PASSWORD=${backend_db_password}" \
+  "JWT_SECRET=${jwt_secret}" \
+  "JWT_REFRESH_SECRET=${jwt_refresh_secret}" \
+  "JWT_MONEROPAY_SECRET=${jwt_moneropay_secret}" \
+  "JWT_LWS_TOKEN=${jwt_lws_token}" \
+  "MONERO_WALLET_RPC_PASSWORD=${wallet_rpc_password}" \
+  "WALLET_PASSWORD=${wallet_password}" \
+  "MONEROPAY_POSTGRES_PASSWORD=${moneropay_db_password}"
+
+write_env "${BACKEND_DB_ENV}" \
+  "POSTGRES_USER=moneromerchant" \
+  "POSTGRES_PASSWORD=${backend_db_password}" \
+  "POSTGRES_DB=moneromerchant"
+
+write_env "${MONEROPAY_DB_ENV}" \
+  "POSTGRES_USER=moneropay" \
+  "POSTGRES_PASSWORD=${moneropay_db_password}" \
+  "POSTGRES_DB=moneropay"
+
+write_env "${MONEROPAY_ENV}" \
+  "RPC_ADDRESS=http://monero-wallet-rpc:28081/json_rpc" \
+  "RPC_USERNAME=${wallet_rpc_username}" \
+  "RPC_PASSWORD=${wallet_rpc_password}" \
+  "POSTGRESQL=postgresql://moneropay:${moneropay_db_password}@moneropay-postgresql:5432/moneropay?sslmode=disable" \
+  "ZERO_CONF=true"

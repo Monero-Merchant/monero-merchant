@@ -1,0 +1,21 @@
+manifestVersion: 1.1
+id: monero-merchant
+name: Monero Merchant
+tagline: Monero POS backend for merchants
+icon: https://raw.githubusercontent.com/Monero-Merchant/monero-merchant/main/icons/mm.png
+category: Finance
+version: "0.1.0"
+port: 8080
+description: >-
+  Monero Merchant packages the backend, MoneroPay, and wallet RPC for
+  one-click Umbrel installs.
+website: https://moneromerchant.com
+developer: MoneroMerchant.com
+submitter: MoneroMerchant.com
+repo: https://github.com/Monero-Merchant/monero-merchant
+support: https://matrix.to/#/#monero-merchant:matrix.org
+gallery: []
+path: ""
+defaultUsername: admin
+deterministicPassword: true
+releaseNotes: ""

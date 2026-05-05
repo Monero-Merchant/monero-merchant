@@ -9,8 +9,6 @@ import (
 	"log"
 	"net/http"
 	"time"
-
-	"github.com/gabstv/httpdigest"
 )
 
 type Client struct {
@@ -21,16 +19,11 @@ type Client struct {
 }
 
 func NewClient(endpoint, username, password string) *Client {
-	client := &http.Client{Timeout: 30 * time.Second}
-	if username != "" || password != "" {
-		client.Transport = httpdigest.New(username, password)
-	}
-
 	return &Client{
 		Endpoint: endpoint,
 		Username: username,
 		Password: password,
-		client:   client,
+		client:   &http.Client{Timeout: 30 * time.Second},
 	}
 }
 
@@ -73,6 +66,9 @@ func (c *Client) Call(ctx context.Context, method string, params interface{}, re
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	if c.Username != "" || c.Password != "" {
+		req.SetBasicAuth(c.Username, c.Password)
+	}
 
 	resp, err := c.client.Do(req)
 	if err != nil {

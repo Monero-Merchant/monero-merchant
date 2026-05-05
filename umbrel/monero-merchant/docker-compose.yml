@@ -111,18 +111,13 @@ services:
       - backend-db
 
   backend:
-    image: ghcr.io/djuricx01/monero-merchant-backend:umbrel@sha256:f69bf803264b80d3933e6033b3d374db00575db010292bddca53a702db95283d
+    image: ${MONERO_MERCHANT_BACKEND_IMAGE:-ghcr.io/djuricx01/monero-merchant-backend:umbrel@sha256:f69bf803264b80d3933e6033b3d374db00575db010292bddca53a702db95283d}
     container_name: monero-merchant_backend_1
     restart: unless-stopped
     env_file:
       - ${APP_DATA_DIR}/data/backend.env
       - ${APP_DATA_DIR}/data/backend.secrets.env
-    environment:
-      MONERO_MERCHANT_CONFIG_FILE: /data/backend.env
-      MONERO_MERCHANT_SECRETS_FILE: /data/backend.secrets.env
     volumes:
-      - ${APP_DATA_DIR}/data/backend.env:/data/backend.env:ro
-      - ${APP_DATA_DIR}/data/backend.secrets.env:/data/backend.secrets.env:ro
       - ${APP_DATA_DIR}/data/backend.env:/app/.env:ro
     depends_on:
       backend-db:

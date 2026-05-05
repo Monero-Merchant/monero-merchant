@@ -40,8 +40,6 @@ type Config struct {
 
 	// Monero Daemon RPC Configuration
 	MoneroDaemonRPCEndpoint string
-	MoneroDaemonRPCUsername string
-	MoneroDaemonRPCPassword string
 
 	// Wallet Settings
 	WalletName              string
@@ -50,8 +48,8 @@ type Config struct {
 }
 
 func LoadConfig() (*Config, error) {
-	if err := loadEnvFiles(); err != nil {
-		return nil, err
+	if err := godotenv.Load(); err != nil {
+		return nil, fmt.Errorf("error loading .env file: %w", err)
 	}
 
 	config := &Config{
@@ -86,8 +84,6 @@ func LoadConfig() (*Config, error) {
 
 		// Monero Daemon RPC Configuration
 		MoneroDaemonRPCEndpoint: os.Getenv("MONERO_DAEMON_RPC_ENDPOINT"),
-		MoneroDaemonRPCUsername: os.Getenv("MONERO_DAEMON_RPC_USERNAME"),
-		MoneroDaemonRPCPassword: os.Getenv("MONERO_DAEMON_RPC_PASSWORD"),
 
 		// Wallet Settings
 		WalletName:     os.Getenv("WALLET_NAME"),
@@ -122,30 +118,4 @@ func LoadConfig() (*Config, error) {
 	}
 
 	return config, nil
-}
-
-func loadEnvFiles() error {
-	files := []string{".env"}
-	for _, key := range []string{"MONERO_MERCHANT_CONFIG_FILE", "MONERO_MERCHANT_SECRETS_FILE"} {
-		if path := os.Getenv(key); path != "" {
-			files = append(files, path)
-		}
-	}
-
-	for _, file := range files {
-		if file == "" {
-			continue
-		}
-		if _, err := os.Stat(file); err != nil {
-			if os.IsNotExist(err) {
-				continue
-			}
-			return fmt.Errorf("error checking env file %s: %w", file, err)
-		}
-		if err := godotenv.Load(file); err != nil {
-			return fmt.Errorf("error loading env file %s: %w", file, err)
-		}
-	}
-
-	return nil
 }

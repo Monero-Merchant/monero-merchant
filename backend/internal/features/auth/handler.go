@@ -216,6 +216,18 @@ func (h *AuthHandler) UpdatePassword(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Invalid vendor_id claim", http.StatusUnauthorized)
 				return
 			}
+
+			// Check if the vendor owns the POS
+			pos, err := h.service.repo.FindPosByID(ctx, *req.PosID)
+			if err != nil {
+				http.Error(w, "POS not found", http.StatusNotFound)
+				return
+			}
+			if pos.VendorID != *vendorIDPtr {
+				http.Error(w, "Unauthorized to update this POS password", http.StatusUnauthorized)
+				return
+			}
+
 			accessToken, refreshToken, err := h.service.UpdatePosPasswordFromVendor(ctx, *vendorIDPtr, *req.PosID, req.NewPassword)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusUnauthorized)

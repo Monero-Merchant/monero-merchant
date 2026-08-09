@@ -22,10 +22,6 @@ import (
 	"gorm.io/gorm"
 )
 
-var adminLoginRateLimiter = httprate.NewRateLimiter(5, 1*time.Minute)
-var vendorLoginRateLimiter = httprate.NewRateLimiter(5, 1*time.Minute)
-var posLoginRateLimiter = httprate.NewRateLimiter(5, 1*time.Minute)
-
 // Accept a context tied to server lifecycle to stop background loops on shutdown
 func NewRouter(ctx context.Context, cfg *config.Config, db *gorm.DB, rpcClient *rpc.Client, moneroPayClient *moneropay.MoneroPayAPIClient) *chi.Mux {
 	r := chi.NewRouter()

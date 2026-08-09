@@ -2,6 +2,8 @@ package auth
 
 import (
 	"context"
+	"crypto/sha256"
+	"crypto/subtle"
 	"errors"
 	"time"
 
@@ -39,7 +41,15 @@ func (s *AuthService) AuthenticateAdmin(ctx context.Context, name string, passwo
 		ctx = context.Background()
 	}
 
-	if name != s.config.AdminName || password != s.config.AdminPassword {
+	nameSupplied := sha256.Sum256([]byte(name))
+	nameExpected := sha256.Sum256([]byte(s.config.AdminName))
+	nameMatch := subtle.ConstantTimeCompare(nameSupplied[:], nameExpected[:])
+
+	passSupplied := sha256.Sum256([]byte(password))
+	passExpected := sha256.Sum256([]byte(s.config.AdminPassword))
+	passMatch := subtle.ConstantTimeCompare(passSupplied[:], passExpected[:])
+
+	if (nameMatch & passMatch) != 1 {
 		return "", "", errors.New("invalid credentials")
 	}
 

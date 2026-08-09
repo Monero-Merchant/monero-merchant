@@ -224,3 +224,4 @@ See `.env.example` for all required variables:
 - `JWT_SECRET`, `JWT_REFRESH_SECRET`, `JWT_MONEROPAY_SECRET`: JWT secrets
 - `MONEROPAY_BASE_URL`, `MONEROPAY_CALLBACK_URL`: MoneroPay API settings
 - `MONERO_WALLET_RPC_ENDPOINT`, `MONERO_WALLET_RPC_USERNAME`, `MONERO_WALLET_RPC_PASSWORD`: Wallet RPC settings (should be same as MoneroPay)
+- `TRUSTED_PROXY_HEADER`: Optional header for trusted proxy (for example, `X-Real-IP`)

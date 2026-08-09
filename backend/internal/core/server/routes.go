@@ -2,10 +2,12 @@ package server
 
 import (
 	"context"
+	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/httprate"
 	"github.com/monero-merchant/monero-merchant/backend/internal/core/config"
 	"github.com/monero-merchant/monero-merchant/backend/internal/core/rpc"
 	localMiddleware "github.com/monero-merchant/monero-merchant/backend/internal/core/server/middleware"
@@ -24,11 +26,26 @@ import (
 func NewRouter(ctx context.Context, cfg *config.Config, db *gorm.DB, rpcClient *rpc.Client, moneroPayClient *moneropay.MoneroPayAPIClient) *chi.Mux {
 	r := chi.NewRouter()
 
-	// Middleware
 	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
+
+	// Resolve client IP from either a trusted proxy header or remote address
+	if header := cfg.TrustedProxyHeader; header != "" {
+		r.Use(middleware.ClientIPFromHeader(header))
+	} else {
+		r.Use(middleware.ClientIPFromRemoteAddr)
+	}
+
 	r.Use(middleware.Logger)
+
 	r.Use(middleware.Recoverer)
+
+	// Rate limiting for all routes
+	r.Use(httprate.LimitBy(100, time.Minute, func(r *http.Request) (string, error) {
+		return httprate.CanonicalizeIP(middleware.GetClientIP(r.Context())), nil
+	}))
+
+	// Max request body size of 64 KB
+	r.Use(middleware.RequestSize(64 * 1024))
 
 	if moneroPayClient == nil {
 		moneroPayClient = moneropay.NewMoneroPayAPIClient()

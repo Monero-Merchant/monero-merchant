@@ -1,19 +1,19 @@
 package admin
 
 import (
+	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"time"
-	"context"
-	"io"
 
-	vendorfeature "github.com/monero-merchant/monero-merchant/backend/internal/features/vendor"
 	"github.com/monero-merchant/monero-merchant/backend/internal/core/models"
 	"github.com/monero-merchant/monero-merchant/backend/internal/core/utils"
+	vendorfeature "github.com/monero-merchant/monero-merchant/backend/internal/features/vendor"
 )
 
 type AdminHandler struct {
-	service *AdminService
+	service       *AdminService
 	vendorService *vendorfeature.VendorService
 }
 
@@ -37,7 +37,7 @@ type walletBalanceResponse struct {
 }
 
 type transferBalanceRequest struct {
-	VendorID uint   `json:"vendor_id"`
+	VendorID uint `json:"vendor_id"`
 }
 
 type deleteVendorRequest struct {
@@ -60,9 +60,9 @@ func (h *AdminHandler) CreateInvite(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-  defer cancel()
-  r = r.WithContext(ctx)
-  r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1MB cap
+	defer cancel()
+	r = r.WithContext(ctx)
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1MB cap
 
 	var req createInviteRequest
 	dec := json.NewDecoder(r.Body)
@@ -164,7 +164,6 @@ func (h *AdminHandler) TransferBalance(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
 	defer cancel()
 	r = r.WithContext(ctx)
-	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 
 	var req transferBalanceRequest
 	dec := json.NewDecoder(r.Body)
@@ -201,7 +200,6 @@ func (h *AdminHandler) DeleteVendor(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 	r = r.WithContext(ctx)
-	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 
 	var req deleteVendorRequest
 	dec := json.NewDecoder(r.Body)

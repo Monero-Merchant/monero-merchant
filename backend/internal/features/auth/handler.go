@@ -3,20 +3,26 @@ package auth
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"time"
 
+	"github.com/go-chi/httprate"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/monero-merchant/monero-merchant/backend/internal/core/models"
 	/* "github.com/monero-merchant/monero-merchant/backend/internal/core/utils" */)
 
 type AuthHandler struct {
 	service *AuthService
+	limiter *httprate.RateLimiter
 }
 
 func NewAuthHandler(service *AuthService) *AuthHandler {
-	return &AuthHandler{service: service}
+	return &AuthHandler{
+		service: service,
+		limiter: httprate.NewRateLimiter(5, 1*time.Minute),
+	}
 }
 
 type loginVendorRequest struct {
@@ -40,13 +46,18 @@ func (h *AuthHandler) LoginAdmin(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 	r = r.WithContext(ctx)
-	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1MB
 
 	var req loginVendorRequest
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Rate limit based on admin name
+	key := fmt.Sprintf("admin:%s", req.Name)
+	if h.limiter.RespondOnLimit(w, r, key) {
 		return
 	}
 
@@ -70,13 +81,18 @@ func (h *AuthHandler) LoginVendor(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 	r = r.WithContext(ctx)
-	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 
 	var req loginVendorRequest
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Rate limit based on vendor name
+	key := fmt.Sprintf("vendor:%s", req.Name)
+	if h.limiter.RespondOnLimit(w, r, key) {
 		return
 	}
 
@@ -101,13 +117,18 @@ func (h *AuthHandler) LoginPos(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 	r = r.WithContext(ctx)
-	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 
 	var req loginPosRequest
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Rate limit based on vendor ID and POS name
+	key := fmt.Sprintf("pos:%s:%s", req.VendorID, req.Name)
+	if h.limiter.RespondOnLimit(w, r, key) {
 		return
 	}
 
@@ -140,7 +161,6 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 	r = r.WithContext(ctx)
-	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 
 	var req RefreshTokenRequest
 
@@ -194,7 +214,6 @@ func (h *AuthHandler) UpdatePassword(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 	r = r.WithContext(ctx)
-	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 
 	var req UpdatePasswordRequest
 	dec := json.NewDecoder(r.Body)

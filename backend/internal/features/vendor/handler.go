@@ -36,7 +36,6 @@ func (h *VendorHandler) CreateVendor(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 	r = r.WithContext(ctx)
-	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 
 	var req createVendorRequest
 	dec := json.NewDecoder(r.Body)
@@ -113,7 +112,6 @@ func (h *VendorHandler) CreatePos(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 	r = r.WithContext(ctx)
-	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 
 	var req createPosRequest
 	dec := json.NewDecoder(r.Body)

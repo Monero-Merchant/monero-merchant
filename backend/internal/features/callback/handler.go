@@ -60,7 +60,6 @@ func (h *CallbackHandler) LwsHook(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 	r = r.WithContext(ctx)
-	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {

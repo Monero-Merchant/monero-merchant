@@ -45,6 +45,9 @@ type Config struct {
 	WalletName              string
 	WalletPassword          string
 	WalletAutoRefreshPeriod uint32
+
+	// Rate limiting
+	TrustedProxyHeader string
 }
 
 func LoadConfig() (*Config, error) {
@@ -88,6 +91,8 @@ func LoadConfig() (*Config, error) {
 		// Wallet Settings
 		WalletName:     os.Getenv("WALLET_NAME"),
 		WalletPassword: os.Getenv("WALLET_PASSWORD"),
+
+		TrustedProxyHeader: os.Getenv("TRUSTED_PROXY_HEADER"),
 	}
 
 	if period := os.Getenv("WALLET_AUTO_REFRESH_PERIOD"); period != "" {

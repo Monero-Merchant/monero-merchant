@@ -35,10 +35,10 @@ pull:
 	docker compose pull
 
 reset:
-	docker compose down -v --remove-orphans
+	docker compose down -v --rmi all --remove-orphans
 	rm -f .env
-	sudo rm -rf moneropay
-	sudo rm -rf simple-monero-wallet-rpc-docker
+	rm -rf moneropay
+	rm -rf simple-monero-wallet-rpc-docker
 
 clean:
 	docker compose down --remove-orphans
@@ -56,5 +56,5 @@ help:
 	@echo "  make restart   - restart containers"
 	@echo "  make config    - show resolved docker compose config"
 	@echo "  make pull      - pull remote images"
-	@echo "  make reset     - DELETE containers, database/wallet data, .env, and cloned deps"
+	@echo "  make reset     - DELETE containers, service images, database/wallet data, .env, and cloned deps"
 	@echo "  make clean     - remove containers and prune builder cache; preserve application data"

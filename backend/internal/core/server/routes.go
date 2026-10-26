@@ -131,6 +131,7 @@ func NewRouter(ctx context.Context, cfg *config.Config, db *gorm.DB, rpcClient *
 			r.Get("/admin/wallet-info", adminHandler.GetWalletInfo)
 			r.Post("/admin/setup-wallet", adminHandler.SetupWallet)
 			r.Post("/admin/restore-wallet", adminHandler.RestoreWallet)
+			r.Post("/admin/restore-wallet-view-only", adminHandler.RestoreWalletViewOnly)
 			r.Post("/admin/wallet-seed", adminHandler.GetWalletSeed)
 
 			// Vendor routes

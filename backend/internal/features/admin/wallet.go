@@ -119,6 +119,29 @@ func (s *AdminService) RestoreWallet(ctx context.Context, seed string, restoreHe
 	return nil
 }
 
+func (s *AdminService) RestoreWalletViewOnly(ctx context.Context, filename, walletPassword, primaryAddress, viewKey string, restoreHeight uint64) *models.HTTPError {
+	filename = strings.TrimSpace(filename)
+	primaryAddress = strings.TrimSpace(primaryAddress)
+	viewKey = strings.TrimSpace(viewKey)
+	if filename == "" || primaryAddress == "" || viewKey == "" {
+		return models.NewHTTPError(http.StatusBadRequest, "filename, primary_address and viewkey are required")
+	}
+
+	params := map[string]any{
+		"filename":         filename,
+		"password":         walletPassword,
+		"address":          primaryAddress,
+		"viewkey":          viewKey,
+		"restore_height":   restoreHeight,
+		"autosave_current": true,
+	}
+	if httpErr := s.createWallet(ctx, "generate_from_keys", params); httpErr != nil {
+		return httpErr
+	}
+	log.Printf("View-only wallet %q restored from keys", filename)
+	return nil
+}
+
 func (s *AdminService) GetWalletSeed(ctx context.Context) (string, *models.HTTPError) {
 	var resp struct {
 		Key string `json:"key"`

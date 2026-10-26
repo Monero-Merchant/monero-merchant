@@ -384,6 +384,41 @@ func (h *AdminHandler) RestoreWallet(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]any{"success": true})
 }
 
+type restoreWalletViewOnlyRequest struct {
+	Filename       string `json:"filename"`
+	WalletPassword string `json:"wallet_password"`
+	PrimaryAddress string `json:"primary_address"`
+	ViewKey        string `json:"viewkey"`
+	RestoreHeight  uint64 `json:"restore_height"`
+}
+
+func (h *AdminHandler) RestoreWalletViewOnly(w http.ResponseWriter, r *http.Request) {
+	role, ok := utils.GetClaimFromContext(r.Context(), models.ClaimsRoleKey)
+	if !ok || role != "admin" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req restoreWalletViewOnlyRequest
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 90*time.Second)
+	defer cancel()
+
+	if httpErr := h.service.RestoreWalletViewOnly(ctx, req.Filename, req.WalletPassword, req.PrimaryAddress, req.ViewKey, req.RestoreHeight); httpErr != nil {
+		http.Error(w, httpErr.Message, httpErr.Code)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"success": true})
+}
+
 type walletSeedRequest struct {
 	Password string `json:"password"`
 }

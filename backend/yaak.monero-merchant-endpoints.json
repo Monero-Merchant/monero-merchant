@@ -1432,6 +1432,61 @@
       },
       {
         "model": "http_request",
+        "id": "rq_ed64d008e3",
+        "createdAt": "2026-10-26T05:56:06.060988",
+        "updatedAt": "2026-10-26T05:56:06.060988",
+        "workspaceId": "wk_rXkv29KJAL",
+        "folderId": "fl_cN69X44otu",
+        "authentication": {
+          "prefix": "Bearer",
+          "token": "${[ admin_jwt ]}"
+        },
+        "authenticationType": "bearer",
+        "body": {
+          "text": "{\n  \"filename\": \"<wallet name>\",\n  \"wallet_password\": \"<wallet password>\",\n  \"primary_address\": \"<primary address>\",\n  \"viewkey\": \"<private view key>\",\n  \"restore_height\": 0\n}"
+        },
+        "bodyType": "application/json",
+        "description": "POST /api/admin/restore-wallet-view-only. Replace the wallet placeholders before sending. Requires an admin JWT. Calls generate_from_keys with autosave_current=true and no spend key. Returns 409 if a wallet is open or the filename exists. Match WALLET_NAME and WALLET_PASSWORD to reopen the wallet after restart.",
+        "headers": [
+          {
+            "enabled": true,
+            "name": "Content-Type",
+            "value": "application/json",
+            "id": null
+          }
+        ],
+        "method": "POST",
+        "name": "restore wallet view only",
+        "sortPriority": 11500.0,
+        "url": "${[ host ]}/api/admin/restore-wallet-view-only",
+        "urlParameters": [],
+        "settingSendCookies": {
+          "enabled": false,
+          "value": true
+        },
+        "settingStoreCookies": {
+          "enabled": false,
+          "value": true
+        },
+        "settingValidateCertificates": {
+          "enabled": false,
+          "value": true
+        },
+        "settingFollowRedirects": {
+          "enabled": false,
+          "value": true
+        },
+        "settingRequestTimeout": {
+          "enabled": false,
+          "value": 0
+        },
+        "settingHttpVersion": {
+          "enabled": false,
+          "value": "auto"
+        }
+      },
+      {
+        "model": "http_request",
         "id": "rq_uCLcS159iY",
         "createdAt": "2026-10-26T00:19:21.968398178",
         "updatedAt": "2026-10-26T00:19:21.968398178",

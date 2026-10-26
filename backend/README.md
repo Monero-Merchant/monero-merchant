@@ -196,6 +196,7 @@ All endpoints are under `/api` on your backend origin. Admin/vendor/POS authenti
 | GET | `/api/admin/wallet-info` | Admin | None | Returns `exists`, `address` and `wallet_name`. |
 | POST | `/api/admin/setup-wallet` | Admin | None | Creates the wallet. 409 if one exists. |
 | POST | `/api/admin/restore-wallet` | Admin | `{"seed":"<seed>","restore_height":0}` | Restores the wallet from its seed. 409 if one exists. |
+| POST | `/api/admin/restore-wallet-view-only` | Admin | `{"filename":"<wallet name>","wallet_password":"<wallet password>","primary_address":"<primary address>","viewkey":"<private view key>","restore_height":0}` | Restores a view-only wallet using `generate_from_keys`, with `autosave_current: true` and no spend key. 409 if a wallet is open or the filename exists. Use matching `WALLET_NAME` and `WALLET_PASSWORD` configuration to reopen it after a restart. |
 | POST | `/api/admin/wallet-seed` | Admin | `{"password":"<admin-password>"}` | Returns the wallet seed. |
 | POST | `/api/vendor/create` | None | `{"name":"<vendor-name>","password":"<vendor-password>","monero_subaddress":"<payout-subaddress>","invite_code":"<invite-code>"}` | Invite-based registration; optional `email` is also supported. |
 | GET | `/api/vendor/pos-list` | Vendor | None | Lists the authenticated vendor's POS units. |

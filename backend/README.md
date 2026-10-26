@@ -194,6 +194,9 @@ All endpoints are under `/api` on your backend origin. Admin/vendor/POS authenti
 | GET | `/api/admin/transactions?limit=100&offset=0` | Admin | None | Lists all sales, newest first, with `total`. |
 | GET | `/api/admin/pos-devices` | Admin | None | Lists all POS devices. |
 | GET | `/api/admin/wallet-info` | Admin | None | Returns `exists`, `address` and `wallet_name`. |
+| POST | `/api/admin/close-wallet` | Admin | None | Saves and closes the current wallet using `close_wallet`. Returns `success`; 404 if no wallet is open, 502 on other RPC failures. |
+| POST | `/api/admin/open-wallet` | Admin | `{"wallet_name":"<wallet name>","wallet_password":"<wallet password>"}` | Opens the supplied wallet using `open_wallet` with `autosave_current: true`. Returns `success`; 400 for a blank name, 502 on RPC failure. Empty passwords are supported. |
+| GET | `/api/admin/list-wallet` | Admin | None | Lists wallet names as `{"wallets":["wallet"]}` from `WALLET_DIRECTORY`. 503 if unconfigured, 500 if unreadable. |
 | POST | `/api/admin/setup-wallet` | Admin | None | Creates the wallet. 409 if one exists. |
 | POST | `/api/admin/restore-wallet` | Admin | `{"seed":"<seed>","restore_height":0}` | Restores the wallet from its seed. 409 if one exists. |
 | POST | `/api/admin/wallet-seed` | Admin | `{"password":"<admin-password>"}` | Returns the wallet seed. |

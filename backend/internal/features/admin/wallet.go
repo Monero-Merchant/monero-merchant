@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/monero-merchant/monero-merchant/backend/internal/core/models"
@@ -101,6 +102,61 @@ func (s *AdminService) SetupWallet(ctx context.Context) *models.HTTPError {
 	}
 	log.Printf("Wallet %q created", s.config.WalletName)
 	return nil
+}
+
+func (s *AdminService) CloseWallet(ctx context.Context) *models.HTTPError {
+	if err := s.rpcClient.Call(ctx, "close_wallet", map[string]any{"autosave_current": true}, nil); err != nil {
+		if isWalletNotOpen(err) {
+			return models.NewHTTPError(http.StatusNotFound, "no wallet is open")
+		}
+		return models.NewHTTPError(http.StatusBadGateway, err.Error())
+	}
+	return nil
+}
+
+func (s *AdminService) OpenWallet(ctx context.Context, walletName, walletPassword string) *models.HTTPError {
+	walletName = strings.TrimSpace(walletName)
+	if walletName == "" {
+		return models.NewHTTPError(http.StatusBadRequest, "wallet_name is required")
+	}
+
+	params := map[string]any{
+		"filename":         walletName,
+		"password":         walletPassword,
+		"autosave_current": true,
+	}
+	if err := s.rpcClient.Call(ctx, "open_wallet", params, nil); err != nil {
+		return models.NewHTTPError(http.StatusBadGateway, err.Error())
+	}
+	return nil
+}
+
+func (s *AdminService) ListWallets(ctx context.Context) ([]string, *models.HTTPError) {
+	if err := ctx.Err(); err != nil {
+		return nil, models.NewHTTPError(http.StatusRequestTimeout, err.Error())
+	}
+	if s.config.WalletDirectory == "" {
+		return nil, models.NewHTTPError(http.StatusServiceUnavailable, "wallet directory is not configured")
+	}
+
+	entries, err := os.ReadDir(s.config.WalletDirectory)
+	if err != nil {
+		log.Printf("Failed to list wallet directory: %v", err)
+		return nil, models.NewHTTPError(http.StatusInternalServerError, "failed to list wallet directory")
+	}
+
+	wallets := make([]string, 0)
+	for _, entry := range entries {
+		// Each wallet has a .keys file; caches and backups are not separate wallets.
+		if !entry.Type().IsRegular() || !strings.HasSuffix(entry.Name(), ".keys") {
+			continue
+		}
+		name := strings.TrimSuffix(entry.Name(), ".keys")
+		if name != "" {
+			wallets = append(wallets, name)
+		}
+	}
+	return wallets, nil
 }
 
 func (s *AdminService) RestoreWallet(ctx context.Context, seed string, restoreHeight uint64) *models.HTTPError {

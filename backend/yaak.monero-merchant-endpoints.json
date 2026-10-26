@@ -1331,6 +1331,153 @@
       },
       {
         "model": "http_request",
+        "id": "rq_8d0d649c7b",
+        "createdAt": "2026-10-26T07:35:25.226199",
+        "updatedAt": "2026-10-26T07:35:25.226199",
+        "workspaceId": "wk_rXkv29KJAL",
+        "folderId": "fl_cN69X44otu",
+        "authentication": {
+          "prefix": "Bearer",
+          "token": "${[ admin_jwt ]}"
+        },
+        "authenticationType": "bearer",
+        "body": {},
+        "bodyType": null,
+        "description": "Saves and closes the currently open wallet using close_wallet. Returns 404 when no wallet is open. Calling wallet-info afterwards may reopen the configured wallet.",
+        "headers": [],
+        "method": "POST",
+        "name": "close wallet",
+        "sortPriority": 9200.0,
+        "url": "${[ host ]}/api/admin/close-wallet",
+        "urlParameters": [],
+        "settingSendCookies": {
+          "enabled": false,
+          "value": true
+        },
+        "settingStoreCookies": {
+          "enabled": false,
+          "value": true
+        },
+        "settingValidateCertificates": {
+          "enabled": false,
+          "value": true
+        },
+        "settingFollowRedirects": {
+          "enabled": false,
+          "value": true
+        },
+        "settingRequestTimeout": {
+          "enabled": false,
+          "value": 0
+        },
+        "settingHttpVersion": {
+          "enabled": false,
+          "value": "auto"
+        }
+      },
+      {
+        "model": "http_request",
+        "id": "rq_23367eaa98",
+        "createdAt": "2026-10-26T07:35:25.226199",
+        "updatedAt": "2026-10-26T07:35:25.226199",
+        "workspaceId": "wk_rXkv29KJAL",
+        "folderId": "fl_cN69X44otu",
+        "authentication": {
+          "prefix": "Bearer",
+          "token": "${[ admin_jwt ]}"
+        },
+        "authenticationType": "bearer",
+        "body": {
+          "text": "{\n  \"wallet_name\": \"<wallet name>\",\n  \"wallet_password\": \"<wallet password>\"\n}"
+        },
+        "bodyType": "application/json",
+        "description": "Opens the supplied wallet using open_wallet and saves any currently open wallet first. Does not update WALLET_NAME or WALLET_PASSWORD. Empty wallet passwords are supported.",
+        "headers": [
+          {
+            "enabled": true,
+            "name": "Content-Type",
+            "value": "application/json",
+            "id": null
+          }
+        ],
+        "method": "POST",
+        "name": "open wallet",
+        "sortPriority": 9400.0,
+        "url": "${[ host ]}/api/admin/open-wallet",
+        "urlParameters": [],
+        "settingSendCookies": {
+          "enabled": false,
+          "value": true
+        },
+        "settingStoreCookies": {
+          "enabled": false,
+          "value": true
+        },
+        "settingValidateCertificates": {
+          "enabled": false,
+          "value": true
+        },
+        "settingFollowRedirects": {
+          "enabled": false,
+          "value": true
+        },
+        "settingRequestTimeout": {
+          "enabled": false,
+          "value": 0
+        },
+        "settingHttpVersion": {
+          "enabled": false,
+          "value": "auto"
+        }
+      },
+      {
+        "model": "http_request",
+        "id": "rq_ea062563c6",
+        "createdAt": "2026-10-26T07:35:25.226199",
+        "updatedAt": "2026-10-26T07:35:25.226199",
+        "workspaceId": "wk_rXkv29KJAL",
+        "folderId": "fl_cN69X44otu",
+        "authentication": {
+          "prefix": "Bearer",
+          "token": "${[ admin_jwt ]}"
+        },
+        "authenticationType": "bearer",
+        "body": {},
+        "bodyType": null,
+        "description": "Lists wallet names from regular .keys files in WALLET_DIRECTORY, excluding cache files, backups and symlinks. Requires a readable wallet directory (mounted at /wallets by Compose). Returns a wallets array.",
+        "headers": [],
+        "method": "GET",
+        "name": "list wallets",
+        "sortPriority": 9600.0,
+        "url": "${[ host ]}/api/admin/list-wallet",
+        "urlParameters": [],
+        "settingSendCookies": {
+          "enabled": false,
+          "value": true
+        },
+        "settingStoreCookies": {
+          "enabled": false,
+          "value": true
+        },
+        "settingValidateCertificates": {
+          "enabled": false,
+          "value": true
+        },
+        "settingFollowRedirects": {
+          "enabled": false,
+          "value": true
+        },
+        "settingRequestTimeout": {
+          "enabled": false,
+          "value": 0
+        },
+        "settingHttpVersion": {
+          "enabled": false,
+          "value": "auto"
+        }
+      },
+      {
+        "model": "http_request",
         "id": "rq_79KekMap8X",
         "createdAt": "2026-10-26T00:19:21.924862527",
         "updatedAt": "2026-10-26T00:19:21.924862527",

@@ -135,9 +135,12 @@ services:
 
       WALLET_NAME: ${WALLET_NAME}
       WALLET_PASSWORD: ${WALLET_PASSWORD}
+      WALLET_DIRECTORY: /wallets
       WALLET_AUTO_REFRESH_PERIOD: ${WALLET_AUTO_REFRESH_PERIOD}
 
       TRUSTED_PROXY_HEADER: ${TRUSTED_PROXY_HEADER:-}
+    volumes:
+      - ./moneropay/data/wallet:/wallets:ro
     ports:
       - "${BACKEND_PORT}:8080"
     extra_hosts:

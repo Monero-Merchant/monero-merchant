@@ -48,6 +48,7 @@ type Config struct {
 	// Wallet Settings
 	WalletName              string
 	WalletPassword          string
+	WalletDirectory         string
 	WalletAutoRefreshPeriod uint32
 
 	// Exchange rates
@@ -99,8 +100,9 @@ func LoadConfig() (*Config, error) {
 		MoneroDaemonRPCPassword: os.Getenv("MONERO_DAEMON_RPC_PASSWORD"),
 
 		// Wallet Settings
-		WalletName:     os.Getenv("WALLET_NAME"),
-		WalletPassword: os.Getenv("WALLET_PASSWORD"),
+		WalletName:      os.Getenv("WALLET_NAME"),
+		WalletPassword:  os.Getenv("WALLET_PASSWORD"),
+		WalletDirectory: os.Getenv("WALLET_DIRECTORY"),
 
 		TrustedProxyHeader: os.Getenv("TRUSTED_PROXY_HEADER"),
 

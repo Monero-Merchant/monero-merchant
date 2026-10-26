@@ -10,6 +10,9 @@ services:
       MONEROPAY_BASE_URL: ${MONEROPAY_BASE_URL:-http://host.docker.internal:5000}
       MONEROPAY_CALLBACK_URL: ${MONEROPAY_CALLBACK_URL:-http://backend:8080/api/callback/}
       MONERO_WALLET_RPC_ENDPOINT: ${MONERO_WALLET_RPC_ENDPOINT:-http://host.docker.internal:18083/json_rpc}
+      WALLET_DIRECTORY: /wallets
+    volumes:
+      - ../moneropay/data/wallet:/wallets:ro
     ports:
       - "8080:8080"
     depends_on:

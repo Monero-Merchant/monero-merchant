@@ -1,6 +1,8 @@
 const $ = id => document.getElementById(id);
 const ATOMIC = 1e12;
 const TX_PAGE = 100;
+const TX_MAX = 500;
+const REFRESH_MS = 30000;
 const SEED_DONE_KEY = 'mm_admin_seed_backed_up';
 
 let auth = { access: null, refresh: null };
@@ -168,14 +170,19 @@ function showApp() {
   $('topNav').classList.remove('hidden');
   $('appScreen').classList.remove('hidden');
   loadAll();
+  setInterval(() => { if (!document.hidden) loadAll(); }, REFRESH_MS);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) loadAll(); });
 }
 
 // ============ Data ============
+// Calls made while a load is running share it
+let loading = null;
 function loadAll() {
-  return Promise.all([
+  loading = loading || Promise.all([
     fetchHealth(), fetchDaemonStatus(), fetchBalance(), fetchWalletInfo(),
     fetchVendors(), fetchTx(), fetchPos(), fetchInvites()
-  ]).catch(() => {});
+  ]).catch(() => {}).finally(() => { loading = null; });
+  return loading;
 }
 
 async function fetchHealth() {
@@ -238,8 +245,10 @@ async function fetchWalletInfo() {
     return;
   }
   const d = await res.json();
-  $('walletSetupCard').classList.toggle('hidden', d.exists);
-  $('restoreCard').classList.add('hidden');
+  // Keep an open restore form so a refresh doesn't wipe a half-typed seed
+  const restoring = !$('restoreCard').classList.contains('hidden');
+  $('walletSetupCard').classList.toggle('hidden', d.exists || restoring);
+  if (d.exists) $('restoreCard').classList.add('hidden');
   $('seedReminder').classList.toggle('hidden', !d.exists || seedBackedUp());
   if (!d.exists) {
     wrap.replaceChildren(empty('No wallet yet'));
@@ -290,7 +299,9 @@ function txBadge(tx) {
 
 async function fetchTx(more) {
   const offset = more ? txs.length : 0;
-  const res = await api('GET', '/admin/transactions?limit=' + TX_PAGE + '&offset=' + offset);
+  // A refresh reloads the rows already shown, up to the API's limit
+  const limit = more ? TX_PAGE : Math.min(Math.max(txs.length, TX_PAGE), TX_MAX);
+  const res = await api('GET', '/admin/transactions?limit=' + limit + '&offset=' + offset);
   if (!res.ok) return toast('Failed to load transactions');
   const d = await res.json();
   txs = more ? txs.concat(d.transactions || []) : (d.transactions || []);
@@ -452,6 +463,7 @@ function navTo(page) {
   document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.nav === page));
   document.querySelectorAll('.section').forEach(el => el.classList.toggle('active', el.id === 'sec-' + page));
   document.querySelector('.main').scrollTo({ top: 0 });
+  loadAll();
 }
 
 // ============ Startup ============

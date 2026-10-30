@@ -110,7 +110,7 @@ class BackendRepository @Inject constructor(
 
                     // Crucial check: are we still supposed to be polling for this transactionId?
                     if (this@BackendRepository.currentTransactionId != transactionId) {
-                        Log.d(logTag, "[HTTP] currentTransactionId changed from $transactionId to ${this@BackendRepository.currentTransactionId}. Stopping this polling loop.")
+                        Log.d(logTag, "[HTTP] currentTransactionId changed from $transactionId to $currentTransactionId. Stopping this polling loop.")
                         break // Exit loop if the repository is now observing a different ID
                     }
 
@@ -123,6 +123,9 @@ class BackendRepository @Inject constructor(
                         if (fetchedStatus is DataResult.Success) {
                             Log.d(logTag, "[HTTP] Received update for ID $transactionId: $fetchedStatus")
                             _currentTransactionStatus.value = fetchedStatus.data
+                            if (fetchedStatus.data.accepted) {
+                                stopObservingTransactionUpdates()
+                            }
                         } else {
                             Log.w(logTag, "[HTTP] Transaction $transactionId not found or error fetching via HTTP.")
                             if (webSocketCollectionJob?.isActive != true && _currentTransactionStatus.value != null) {
@@ -182,14 +185,7 @@ class BackendRepository @Inject constructor(
             Log.d(logTag, "WebSocket session for ID: $previousId was already inactive or null.")
         }
 
-
-        // 4. Reset the current transaction status
-        if (previousId != null) {
-            _currentTransactionStatus.value = null
-            Log.d(logTag, "Current transaction status flow reset to null for ID: $previousId")
-        }
-
-        // 5. Clear the currentTransactionId
+        // 4. Clear the currentTransactionId (status is kept until the next transaction)
         this.currentTransactionId = null
         Log.d(logTag, "currentTransactionId reset.")
     }

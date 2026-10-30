@@ -1,0 +1,11 @@
+# Builds the backend, frontend and gateway from source: make rebuild
+services:
+  backend:
+    image: monero-merchant-backend:dev
+    build: ./backend
+  frontend:
+    image: monero-merchant-frontend:dev
+    build: ./frontend
+  gateway:
+    image: monero-merchant-gateway:dev
+    build: ./gateway

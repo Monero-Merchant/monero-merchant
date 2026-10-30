@@ -100,8 +100,7 @@ services:
   # Backend API
   # ------------------------
   backend:
-    image: moneromerchant/monero-merchant-backend
-    build: ./backend
+    image: ghcr.io/monero-merchant/monero-merchant-backend:${MONERO_MERCHANT_VERSION:-latest}
     restart: unless-stopped
     depends_on:
       backend-db:
@@ -148,16 +147,14 @@ services:
   # Frontend
   # ------------------------
   frontend:
-    image: monero-merchant-frontend
-    build: ./frontend
+    image: ghcr.io/monero-merchant/monero-merchant-frontend:${MONERO_MERCHANT_VERSION:-latest}
     restart: unless-stopped
 
   # ------------------------
   # Gateway
   # ------------------------
   gateway:
-    image: monero-merchant-gateway
-    build: ./gateway
+    image: ghcr.io/monero-merchant/monero-merchant-gateway:${MONERO_MERCHANT_VERSION:-latest}
     restart: unless-stopped
     depends_on:
       - backend

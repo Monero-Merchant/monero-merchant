@@ -11,6 +11,8 @@ import java.net.URI
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.moneromerchant.pos.data.repository.AuthRepository
 import com.moneromerchant.pos.data.repository.BackendRepository
 import com.moneromerchant.pos.data.repository.DataStoreRepository
@@ -69,7 +71,8 @@ class LoginViewModel @Inject constructor(
         errorMessage = ""
     }
 
-    fun loginPressed() {
+    fun loginPressed(requestLocalNetworkPermission: (() -> Unit)? = null) {
+        if (inProgress) return
         errorMessage = ""
         val trimmedInstanceUrl = instanceUrl.trim()
         if (trimmedInstanceUrl.isEmpty()) {
@@ -104,14 +107,24 @@ class LoginViewModel @Inject constructor(
         instanceUrl = normalizedInstanceUrl
 
         viewModelScope.launch {
-            login(normalizedInstanceUrl)
+            inProgress = true
+            try {
+                val needsPermission = requestLocalNetworkPermission != null && withContext(Dispatchers.IO) {
+                    isLocalServer(normalizedInstanceUrl)
+                }
+                if (needsPermission) {
+                    requestLocalNetworkPermission.invoke()
+                } else {
+                    login(normalizedInstanceUrl)
+                }
+            } finally {
+                inProgress = false
+            }
         }
     }
 
     private suspend fun login(normalizedInstanceUrl: String) {
-        inProgress = true
         val resp = authRepository.login(instanceUrl = normalizedInstanceUrl, vendorID = vendorID.toInt(), username = username, password = password)
-        inProgress = false
         resp.fold(
             onSuccess = {
 

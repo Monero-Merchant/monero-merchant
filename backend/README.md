@@ -201,7 +201,7 @@ All endpoints are under `/api` on your backend origin. Admin/vendor/POS authenti
 | GET | `/api/vendor/pos-list` | Vendor | None | Lists the authenticated vendor's POS units. |
 | POST | `/api/vendor/create-pos` | Vendor | `{"name":"<pos-name>","password":"<pos-password>"}` | Creates a POS account belonging to the authenticated vendor. |
 | GET | `/api/vendor/balance` | Vendor | None | Sums confirmed, untransferred sale amounts; this is an account balance, not a direct wallet RPC balance. |
-| GET | `/api/vendor/export` | Vendor | None | Returns confirmed incoming payments as CSV inside JSON `csv_data`. |
+| GET | `/api/vendor/export` | Vendor | None | Returns confirmed incoming payments and outgoing withdrawals as Koinly formatted CSV inside JSON `csv_data`. |
 | GET | `/api/vendor/transactions` | Vendor | None | Returns confirmed and pending transaction summaries. |
 | POST | `/api/vendor/transfer-balance` | Vendor | None | Queues own payout using the stored subaddress.  |
 | POST | `/api/vendor/delete` | Vendor | None | Deletes the authenticated vendor. The Yaak example's `vendor_id` body is not read. |

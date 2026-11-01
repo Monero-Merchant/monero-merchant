@@ -3,13 +3,13 @@ package pos
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/monero-merchant/monero-merchant/backend/internal/core/config"
+	"github.com/monero-merchant/monero-merchant/backend/internal/core/koinly"
 	"github.com/monero-merchant/monero-merchant/backend/internal/core/models"
 	"github.com/monero-merchant/monero-merchant/backend/internal/thirdparty/moneropay"
 )
@@ -19,8 +19,6 @@ type PosService struct {
 	config    *config.Config
 	moneroPay *moneropay.MoneroPayAPIClient
 }
-
-const moneroAtomicUnitsPerXMR int64 = 1_000_000_000_000
 
 // How long an unpaid sale and its callback URL stay valid
 const PendingSaleTTL = 2 * time.Hour
@@ -201,56 +199,11 @@ func (s *PosService) ExportConfirmedTransactionsCSV(ctx context.Context, vendorI
 		return "", err
 	}
 
-	var builder strings.Builder
-	builder.WriteString("Koinly Date,Amount,Currency,Label,TxHash")
-
-	rows := 0
-	for _, transaction := range transactions {
-		if !transaction.Confirmed {
-			continue
-		}
-
-		for _, sub := range transaction.SubTransactions {
-			builder.WriteByte('\n')
-			builder.WriteString(formatExportRow(sub))
-			rows++
-		}
-	}
-
-	if rows == 0 {
+	rows := koinly.PaymentRows(transactions)
+	if len(rows) == 0 {
 		return "", ErrNoConfirmedTransactions
 	}
-
-	return builder.String(), nil
-}
-
-func formatExportRow(sub *models.SubTransaction) string {
-	date := sub.Timestamp.UTC()
-	dateStr := fmt.Sprintf("%04d-%02d-%02d 00:00 UTC", date.Year(), date.Month(), date.Day())
-	amount := formatAtomicAmountTwoDecimals(sub.Amount)
-
-	return fmt.Sprintf("%s,%s,XMR,income,%s", dateStr, amount, sub.TxHash)
-}
-
-func formatAtomicAmountTwoDecimals(amount int64) string {
-	integer := amount / moneroAtomicUnitsPerXMR
-	remainder := amount % moneroAtomicUnitsPerXMR
-
-	if remainder < 0 {
-		remainder += moneroAtomicUnitsPerXMR
-		integer--
-	}
-
-	centsDivisor := moneroAtomicUnitsPerXMR / 100
-	roundingOffset := centsDivisor / 2
-
-	decimals := (remainder + roundingOffset) / centsDivisor
-	if decimals == 100 {
-		integer++
-		decimals = 0
-	}
-
-	return fmt.Sprintf("%d.%02d", integer, decimals)
+	return koinly.Write(rows)
 }
 
 func (s *PosService) CleanupOldPendingTransactions(ctx context.Context, olderThan time.Duration) (int64, error) {

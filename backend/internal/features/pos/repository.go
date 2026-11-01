@@ -64,6 +64,7 @@ func (r *posRepository) FindTransactionsByPosID(ctx context.Context, vendorID ui
 	var transactions []*models.Transaction
 	if err := r.db.WithContext(ctx).
 		Preload("SubTransactions").
+		Preload("Pos").
 		Where("vendor_id = ? AND pos_id = ?", vendorID, posID).
 		Order("created_at DESC").
 		Find(&transactions).Error; err != nil {

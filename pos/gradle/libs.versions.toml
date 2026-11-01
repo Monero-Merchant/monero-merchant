@@ -1,8 +1,8 @@
 [versions]
-agp = "9.4.1"
+agp = "9.5.0"
 core = "3.5.4"
 coreSplashscreen = "1.2.0"
-datastorePreferences = "1.2.1"
+datastorePreferences = "1.3.0"
 escposThermalprinterAndroid = "3.3.0"
 hiltAndroid = "2.60.1"
 hiltNavigationCompose = "1.4.0"

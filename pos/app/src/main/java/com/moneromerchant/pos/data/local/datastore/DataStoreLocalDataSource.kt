@@ -254,7 +254,7 @@ class DataStoreLocalDataSource @Inject constructor(
     fun getBackendRequestInterval(): Flow<Int> {
         return context.dataStore.data
             .map { preferences ->
-                preferences[BACKEND_REFRESH_INTERVAL] ?: 1
+                preferences[BACKEND_REFRESH_INTERVAL] ?: 5
             }
     }
 

@@ -40,7 +40,7 @@ class BackendViewModel @Inject constructor(
 
     var instanceUrl: String by mutableStateOf("")
 
-    var requestInterval: String by mutableStateOf("1")
+    var requestInterval: String by mutableStateOf("5")
 
     var conf: String by mutableStateOf("")
 
@@ -71,7 +71,7 @@ class BackendViewModel @Inject constructor(
         if (newRequestInterval.isEmpty()) {
             requestInterval = ""
             viewModelScope.launch {
-                dataStoreRepository.saveBackendRequestInterval(1)
+                dataStoreRepository.saveBackendRequestInterval(5)
             }
             return
         }

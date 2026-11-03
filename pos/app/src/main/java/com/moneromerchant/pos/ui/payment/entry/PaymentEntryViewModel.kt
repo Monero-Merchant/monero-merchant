@@ -7,10 +7,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavHostController
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import com.moneromerchant.pos.data.repository.DataStoreRepository
 import com.moneromerchant.pos.data.repository.ExchangeRateRepository
+import com.moneromerchant.pos.data.repository.TransactionManager
 import com.moneromerchant.pos.shared.DataResult
 import com.moneromerchant.pos.ui.PaymentCheckout
 import com.moneromerchant.pos.ui.Settings
@@ -20,6 +22,7 @@ import javax.inject.Inject
 class PaymentEntryViewModel @Inject constructor(
     private val exchangeRateRepository: ExchangeRateRepository,
     private val dataStoreRepository: DataStoreRepository,
+    private val transactionManager: TransactionManager,
 ) : ViewModel() {
 
     private val logTag = "PaymentEntryViewModel"
@@ -44,8 +47,6 @@ class PaymentEntryViewModel @Inject constructor(
     private var isFetchingExchangeRate = false
 
     init {
-        fetchExchangeRate()
-        // get exchange rate from public api
         viewModelScope.launch {
             dataStoreRepository.getRequirePinCodeOnOpenSettings().collect {  storedRequirePinCodeOpenSettings ->
                 requirePinCodeOpenSettings = storedRequirePinCodeOpenSettings
@@ -55,6 +56,10 @@ class PaymentEntryViewModel @Inject constructor(
             dataStoreRepository.getPinCodeOpenSettings().collect { storedPinCodeOpenSettings ->
                 pinCodeOpenSettings = storedPinCodeOpenSettings
             }
+        }
+        // This screen is reused between orders, so reset the amount once one is paid
+        viewModelScope.launch {
+            transactionManager.acceptedTransaction.filterNotNull().collect { clear() }
         }
     }
 

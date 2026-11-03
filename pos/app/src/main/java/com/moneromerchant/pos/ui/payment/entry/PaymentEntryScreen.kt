@@ -30,6 +30,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -43,6 +45,7 @@ import java.math.RoundingMode
 @Composable
 fun PaymentEntryScreenRoot(viewModel: PaymentEntryViewModel, navController: NavHostController) {
     viewModel.setNavController(navController)
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.fetchExchangeRate() }
     PaymentEntryScreen(
         paymentValue = viewModel.paymentValue,
         primaryFiatCurrency = viewModel.primaryFiatCurrency,

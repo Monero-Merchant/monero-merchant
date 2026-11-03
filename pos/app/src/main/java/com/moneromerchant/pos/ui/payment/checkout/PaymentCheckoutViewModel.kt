@@ -22,6 +22,7 @@ import com.moneromerchant.pos.data.repository.HceRepository
 import com.moneromerchant.pos.data.repository.TransactionManager
 import com.moneromerchant.pos.data.repository.TransactionResult
 import com.moneromerchant.pos.shared.DataResult
+import com.moneromerchant.pos.ui.PaymentCheckout
 import com.moneromerchant.pos.ui.PaymentEntry
 import com.moneromerchant.pos.ui.PaymentSuccess
 import java.math.BigDecimal
@@ -49,7 +50,7 @@ class PaymentCheckoutViewModel @Inject constructor(
 
     fun navigateBack() {
         stopReceive()
-        navController?.navigate(PaymentEntry)
+        navController?.popBackStack<PaymentEntry>(inclusive = false)
     }
 
     var paymentValue by mutableStateOf(0.0)
@@ -179,7 +180,9 @@ class PaymentCheckoutViewModel @Inject constructor(
     }
 
     fun navigateToPaymentSuccess(paymentSuccess: PaymentSuccess) {
-        navController?.navigate(paymentSuccess)
+        navController?.navigate(paymentSuccess) {
+            popUpTo<PaymentCheckout> { inclusive = true }
+        }
     }
 
     fun generateQRCode(text: String, width: Int, height: Int, margin: Int, color: Int, background: Int): Bitmap {

@@ -25,7 +25,10 @@ class PaymentSuccessViewModel @Inject constructor(
     }
 
     fun navigateToEntry() {
-        navController?.navigate(PaymentEntry)
+        navController?.navigate(PaymentEntry) {
+            popUpTo<PaymentEntry>()
+            launchSingleTop = true
+        }
     }
 
     var printingInProgress by mutableStateOf(false)

@@ -66,7 +66,10 @@ class NotificationViewModel @Inject constructor(
 
     fun navigateToPaymentEntry() {
         clearCandidate()
-        navController?.navigate(PaymentEntry)
+        navController?.navigate(PaymentEntry) {
+            popUpTo<PaymentEntry>()
+            launchSingleTop = true
+        }
     }
 
     fun printReceipt(accepted: AcceptedTransaction) {

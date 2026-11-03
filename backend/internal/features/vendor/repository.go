@@ -29,6 +29,7 @@ type VendorRepository interface {
 	MarkTransfersCompleted(ctx context.Context, txHash string) error
 	GetPosDevicesByVendorID(ctx context.Context, vendorID uint) ([]*models.Pos, error)
 	FindTransactionsByVendorID(ctx context.Context, vendorID uint) ([]*models.Transaction, error)
+	FindCompletedTransfersByVendorID(ctx context.Context, vendorID uint) ([]*models.Transfer, error)
 	// WithTransaction runs fn with a repository whose writes commit together, or roll back if fn returns an error
 	WithTransaction(ctx context.Context, fn func(VendorRepository) error) error
 }
@@ -272,4 +273,16 @@ func (r *vendorRepository) WithTransaction(ctx context.Context, fn func(VendorRe
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		return fn(&vendorRepository{db: tx})
 	})
+}
+
+func (r *vendorRepository) FindCompletedTransfersByVendorID(ctx context.Context, vendorID uint) ([]*models.Transfer, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	var transfers []*models.Transfer
+	err := r.db.WithContext(ctx).
+		Where("vendor_id = ? AND completed = ? AND tx_hash IS NOT NULL", vendorID, true).
+		Order("updated_at ASC, id ASC").
+		Find(&transfers).Error
+	return transfers, err
 }

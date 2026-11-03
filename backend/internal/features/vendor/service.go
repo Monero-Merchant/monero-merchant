@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/monero-merchant/monero-merchant/backend/internal/core/config"
+	"github.com/monero-merchant/monero-merchant/backend/internal/core/koinly"
 	"github.com/monero-merchant/monero-merchant/backend/internal/core/models"
 	"github.com/monero-merchant/monero-merchant/backend/internal/core/rpc"
 	"github.com/monero-merchant/monero-merchant/backend/internal/core/utils"
@@ -538,61 +539,29 @@ func (s *VendorService) ListTransactionsByVendor(ctx context.Context, vendorID u
 	return result, nil
 }
 
-const moneroAtomicUnitsPerXMR int64 = 1_000_000_000_000
-
 func (s *VendorService) ExportTransactionsByVendor(ctx context.Context, vendorID uint) (string, *models.HTTPError) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-
 	transactions, err := s.repo.FindTransactionsByVendorID(ctx, vendorID)
 	if err != nil {
 		return "", models.NewHTTPError(http.StatusInternalServerError, "DB error: "+err.Error())
 	}
-
-	var builder strings.Builder
-	builder.WriteString("Koinly Date,Amount,Currency,Label,TxHash")
-
-	rows := 0
-	for _, transaction := range transactions {
-		if !transaction.Confirmed {
-			continue
-		}
-
-		for _, sub := range transaction.SubTransactions {
-			builder.WriteByte('\n')
-			date := sub.Timestamp.UTC()
-			dateStr := fmt.Sprintf("%04d-%02d-%02d 00:00 UTC", date.Year(), date.Month(), date.Day())
-			amount := formatAtomicAmount(sub.Amount)
-			builder.WriteString(fmt.Sprintf("%s,%s,XMR,income,%s", dateStr, amount, sub.TxHash))
-			rows++
-		}
+	transfers, err := s.repo.FindCompletedTransfersByVendorID(ctx, vendorID)
+	if err != nil {
+		return "", models.NewHTTPError(http.StatusInternalServerError, "DB error: "+err.Error())
 	}
-
-	if rows == 0 {
-		return "", models.NewHTTPError(http.StatusNotFound, "No confirmed transactions to export")
+	withdrawals, err := koinly.WithdrawalRows(transfers)
+	if err != nil {
+		return "", models.NewHTTPError(http.StatusInternalServerError, "Failed to export withdrawals: "+err.Error())
 	}
-
-	return builder.String(), nil
-}
-
-func formatAtomicAmount(amount int64) string {
-	integer := amount / moneroAtomicUnitsPerXMR
-	remainder := amount % moneroAtomicUnitsPerXMR
-
-	if remainder < 0 {
-		remainder += moneroAtomicUnitsPerXMR
-		integer--
+	rows := append(koinly.PaymentRows(transactions), withdrawals...)
+	if len(rows) == 0 {
+		return "", models.NewHTTPError(http.StatusNotFound, "No completed transactions to export")
 	}
-
-	centsDivisor := moneroAtomicUnitsPerXMR / 100
-	roundingOffset := centsDivisor / 2
-
-	decimals := (remainder + roundingOffset) / centsDivisor
-	if decimals == 100 {
-		integer++
-		decimals = 0
+	data, err := koinly.Write(rows)
+	if err != nil {
+		return "", models.NewHTTPError(http.StatusInternalServerError, "Failed to write CSV: "+err.Error())
 	}
-
-	return fmt.Sprintf("%d.%02d", integer, decimals)
+	return data, nil
 }

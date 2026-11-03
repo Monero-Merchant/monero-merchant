@@ -1,6 +1,11 @@
 // LoginScreen.kt
 package com.moneromerchant.pos.ui.payment.login
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -10,6 +15,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -23,6 +30,16 @@ import com.moneromerchant.pos.ui.common.composables.CustomOutlinedTextField
 @Composable
 fun LoginScreenRoot(viewModel: LoginViewModel, navController: NavHostController) {
     viewModel.setNavController(navController)
+    val context = LocalContext.current
+    val localNetworkPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            viewModel.loginPressed()
+        } else {
+            viewModel.errorMessage = "Nearby devices permission is required to connect to a local merchant server. Allow it in Settings > Apps > Monero Merchant > Permissions > Nearby devices, then retry login."
+        }
+    }
     LoginScreen(
         instanceUrl = viewModel.instanceUrl,
         vendorID = viewModel.vendorID,
@@ -35,7 +52,17 @@ fun LoginScreenRoot(viewModel: LoginViewModel, navController: NavHostController)
         updateUsername = viewModel::updateUsername,
         updatePassword = viewModel::updatePassword,
         resetErrorMessage = viewModel::resetErrorMessage,
-        loginPressed = viewModel::loginPressed,
+        loginPressed = {
+            if (Build.VERSION.SDK_INT >= 37 &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_LOCAL_NETWORK) != PackageManager.PERMISSION_GRANTED
+            ) {
+                viewModel.loginPressed(requestLocalNetworkPermission = {
+                    localNetworkPermission.launch(Manifest.permission.ACCESS_LOCAL_NETWORK)
+                })
+            } else {
+                viewModel.loginPressed()
+            }
+        },
     )
 }
 
@@ -79,6 +106,7 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(16.dp))
             FilledTonalButton(
                 onClick = {loginPressed()},
+                enabled = !inProgress,
             ) {
                 Row {
                     Text("Login")

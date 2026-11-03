@@ -50,6 +50,7 @@ class PaymentCheckoutViewModel @Inject constructor(
 
     fun navigateBack() {
         stopReceive()
+        transactionManager.abandonCurrentTransaction()
         navController?.popBackStack<PaymentEntry>(inclusive = false)
     }
 

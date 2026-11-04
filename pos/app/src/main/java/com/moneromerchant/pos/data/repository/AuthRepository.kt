@@ -4,10 +4,8 @@ import android.util.Log
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO // Or your preferred engine
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.plugins.logging.LogLevel
-import io.ktor.client.plugins.logging.Logger
-import io.ktor.client.plugins.logging.Logging
+import com.moneromerchant.pos.data.remote.auth.configureAuthenticationClient
+import com.moneromerchant.pos.data.remote.auth.safeLoginResult
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
@@ -15,7 +13,6 @@ import io.ktor.http.URLProtocol
 import io.ktor.http.contentType
 import io.ktor.http.encodedPath
 import io.ktor.http.takeFrom
-import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
@@ -39,37 +36,34 @@ class AuthRepository @Inject constructor(
         // Create a temporary Ktor client specifically for this login attempt
         val loginClient = HttpClient(CIO) {
             expectSuccess = true
-            install(ContentNegotiation) {
-                json(jsonSerializer)
-            }
-            install(Logging) {
-                logger = object : Logger { override fun log(message: String) { Log.d("LoginClient", message) } }
-                level = LogLevel.ALL
-            }
+            configureAuthenticationClient(jsonSerializer)
         }
 
         return try {
-            val response: AuthTokenResponse = loginClient.post {
-                url {
-                    takeFrom(instanceUrl)
-                    if (protocol == URLProtocol.HTTP && !instanceUrl.startsWith("http://") && !instanceUrl.startsWith("https://")) {
-                        protocol = URLProtocol.HTTP
+            val result = safeLoginResult {
+                val response: AuthTokenResponse = loginClient.post {
+                    url {
+                        takeFrom(instanceUrl)
+                        if (protocol == URLProtocol.HTTP && !instanceUrl.startsWith("http://") && !instanceUrl.startsWith("https://")) {
+                            protocol = URLProtocol.HTTP
+                        }
+                        encodedPath = "/api/auth/login-pos"
                     }
-                    encodedPath = "/api/auth/login-pos"
-                }
-                contentType(ContentType.Application.Json)
-                setBody(AuthLoginRequest(vendorID, username, password))
-            }.body()
+                    contentType(ContentType.Application.Json)
+                    setBody(AuthLoginRequest(vendorID, username, password))
+                }.body()
 
-            dataStoreRepository.saveBackendInstanceUrl(instanceUrl)
-            dataStoreRepository.saveBackendAccessToken(response.access_token)
-            dataStoreRepository.saveBackendRefreshToken(response.refresh_token)
+                dataStoreRepository.saveBackendInstanceUrl(instanceUrl)
+                dataStoreRepository.saveBackendAccessToken(response.access_token)
+                dataStoreRepository.saveBackendRefreshToken(response.refresh_token)
+            }
 
-            Log.i(TAG, "Login successful to $instanceUrl. Tokens and URL stored.")
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Log.e(TAG, "Login failed for URL $instanceUrl", e)
-            Result.failure(e)
+            if (result.isSuccess) {
+                Log.i(TAG, "Login successful to $instanceUrl. Tokens and URL stored.")
+            } else {
+                Log.e(TAG, "Login failed.")
+            }
+            result
         } finally {
             loginClient.close()
         }

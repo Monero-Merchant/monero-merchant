@@ -13,9 +13,10 @@ import io.ktor.client.plugins.auth.providers.BearerTokens
 import io.ktor.client.plugins.auth.providers.bearer
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
-import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logger
-import io.ktor.client.plugins.logging.Logging
+import com.moneromerchant.pos.BuildConfig
+import com.moneromerchant.pos.data.remote.configureHttpLogging
+import com.moneromerchant.pos.data.remote.auth.configureAuthenticationClient
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.request.header
 import io.ktor.client.request.post
@@ -87,17 +88,7 @@ object BackendModule {
     ): HttpClient {
         return HttpClient(CIO) {
             expectSuccess = false // Handle success/failure manually in refreshTokens block
-            install(ContentNegotiation) {
-                json(json)
-            }
-            install(Logging) {
-                logger = object : Logger {
-                    override fun log(message: String) {
-                        android.util.Log.d("KtorRefreshClient", message)
-                    }
-                }
-                level = LogLevel.ALL
-            }
+            configureAuthenticationClient(json)
             // NO DefaultRequest with base URL here. The full URL will be set in the refreshTokens call.
         }
     }
@@ -133,14 +124,11 @@ object BackendModule {
                 json(json)
             }
 
-            install(Logging) {
-                logger = object : Logger {
-                    override fun log(message: String) {
-                        android.util.Log.d("MainKtorClient", message)
-                    }
+            configureHttpLogging(BuildConfig.DEBUG, object : Logger {
+                override fun log(message: String) {
+                    android.util.Log.d("MainKtorClient", message)
                 }
-                level = LogLevel.ALL
-            }
+            })
 
             install(WebSockets)
 
@@ -198,7 +186,7 @@ object BackendModule {
                             throw e
                         } catch (e: Exception) {
                             // Stay logged in on network errors
-                            android.util.Log.e("MainKtorClientAuth", "Token refresh exception", e)
+                            android.util.Log.e("MainKtorClientAuth", "Token refresh failed.")
                             return@refreshTokens null
                         }
 

@@ -1,18 +1,23 @@
 package com.moneromerchant.pos.data.repository
 
 import android.util.Log
+import com.moneromerchant.pos.BuildConfig
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO // Or your preferred engine
-import com.moneromerchant.pos.data.remote.auth.configureAuthenticationClient
-import com.moneromerchant.pos.data.remote.auth.safeLoginResult
+import io.ktor.client.plugins.ResponseException
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.URLProtocol
 import io.ktor.http.contentType
 import io.ktor.http.encodedPath
 import io.ktor.http.takeFrom
+import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
@@ -31,39 +36,47 @@ class AuthRepository @Inject constructor(
     private val TAG = "AuthRepository"
 
     suspend fun login(instanceUrl: String, vendorID: Int, username: String, password: String): Result<Unit> {
-        Log.d(TAG, "Attempting login for user: ${username} at URL: $instanceUrl")
+        Log.d(TAG, "Attempting login at URL: $instanceUrl")
 
         // Create a temporary Ktor client specifically for this login attempt
         val loginClient = HttpClient(CIO) {
             expectSuccess = true
-            configureAuthenticationClient(jsonSerializer)
+            install(ContentNegotiation) {
+                json(jsonSerializer)
+            }
         }
 
         return try {
-            val result = safeLoginResult {
-                val response: AuthTokenResponse = loginClient.post {
-                    url {
-                        takeFrom(instanceUrl)
-                        if (protocol == URLProtocol.HTTP && !instanceUrl.startsWith("http://") && !instanceUrl.startsWith("https://")) {
-                            protocol = URLProtocol.HTTP
-                        }
-                        encodedPath = "/api/auth/login-pos"
+            val response: AuthTokenResponse = loginClient.post {
+                url {
+                    takeFrom(instanceUrl)
+                    if (protocol == URLProtocol.HTTP && !instanceUrl.startsWith("http://") && !instanceUrl.startsWith("https://")) {
+                        protocol = URLProtocol.HTTP
                     }
-                    contentType(ContentType.Application.Json)
-                    setBody(AuthLoginRequest(vendorID, username, password))
-                }.body()
+                    encodedPath = "/api/auth/login-pos"
+                }
+                contentType(ContentType.Application.Json)
+                setBody(AuthLoginRequest(vendorID, username, password))
+            }.body()
 
-                dataStoreRepository.saveBackendInstanceUrl(instanceUrl)
-                dataStoreRepository.saveBackendAccessToken(response.access_token)
-                dataStoreRepository.saveBackendRefreshToken(response.refresh_token)
-            }
+            dataStoreRepository.saveBackendInstanceUrl(instanceUrl)
+            dataStoreRepository.saveBackendAccessToken(response.access_token)
+            dataStoreRepository.saveBackendRefreshToken(response.refresh_token)
 
-            if (result.isSuccess) {
-                Log.i(TAG, "Login successful to $instanceUrl. Tokens and URL stored.")
-            } else {
-                Log.e(TAG, "Login failed.")
+            Log.i(TAG, "Login successful to $instanceUrl. Tokens and URL stored.")
+            Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Decode errors can include the response JSON
+            if (BuildConfig.DEBUG) Log.e(TAG, "Login failed", e) else Log.e(TAG, "Login failed")
+            val message = when {
+                e is ResponseException && e.response.status == HttpStatusCode.Unauthorized ->
+                    "Login failed: ${e.response.bodyAsText().trim()}"
+                e is ResponseException -> "Login failed (HTTP ${e.response.status.value})"
+                else -> "Login failed (${e.javaClass.simpleName})"
             }
-            result
+            Result.failure(IllegalStateException(message, e))
         } finally {
             loginClient.close()
         }

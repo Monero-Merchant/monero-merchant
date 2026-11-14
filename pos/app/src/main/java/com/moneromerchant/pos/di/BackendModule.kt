@@ -14,9 +14,6 @@ import io.ktor.client.plugins.auth.providers.bearer
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.plugins.logging.Logger
-import com.moneromerchant.pos.BuildConfig
-import com.moneromerchant.pos.data.remote.configureHttpLogging
-import com.moneromerchant.pos.data.remote.auth.configureAuthenticationClient
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.request.header
 import io.ktor.client.request.post
@@ -34,8 +31,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.runBlocking 
 import kotlinx.serialization.json.Json
+import com.moneromerchant.pos.BuildConfig
 import com.moneromerchant.pos.data.remote.auth.model.AuthTokenResponse
 import com.moneromerchant.pos.data.remote.backend.BackendRemoteDataSource
+import com.moneromerchant.pos.data.remote.configureHttpLogging
 import com.moneromerchant.pos.data.repository.AuthRepository
 import com.moneromerchant.pos.data.repository.BackendRepository
 import com.moneromerchant.pos.data.repository.DataStoreRepository
@@ -88,7 +87,9 @@ object BackendModule {
     ): HttpClient {
         return HttpClient(CIO) {
             expectSuccess = false // Handle success/failure manually in refreshTokens block
-            configureAuthenticationClient(json)
+            install(ContentNegotiation) {
+                json(json)
+            }
             // NO DefaultRequest with base URL here. The full URL will be set in the refreshTokens call.
         }
     }
@@ -186,7 +187,11 @@ object BackendModule {
                             throw e
                         } catch (e: Exception) {
                             // Stay logged in on network errors
-                            android.util.Log.e("MainKtorClientAuth", "Token refresh failed.")
+                            if (BuildConfig.DEBUG) {
+                                android.util.Log.e("MainKtorClientAuth", "Token refresh failed", e)
+                            } else {
+                                android.util.Log.e("MainKtorClientAuth", "Token refresh failed")
+                            }
                             return@refreshTokens null
                         }
 

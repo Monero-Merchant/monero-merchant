@@ -2,6 +2,7 @@ package com.moneromerchant.pos.ui.payment.checkout
 
 import com.moneromerchant.pos.ui.common.composables.CurrencyConverterCard
 import android.graphics.Bitmap
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -66,6 +67,7 @@ fun PaymentCheckoutScreen(
     navigateToPaymentSuccess: (PaymentSuccess) -> Unit
 ) {
     val openAlertDialog = remember { mutableStateOf(false) }
+    BackHandler { openAlertDialog.value = true }
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         Column (
             horizontalAlignment = Alignment.CenterHorizontally,

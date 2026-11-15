@@ -13,6 +13,7 @@ import com.google.zxing.qrcode.QRCodeWriter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -21,6 +22,7 @@ import com.moneromerchant.pos.data.repository.HceRepository
 import com.moneromerchant.pos.data.repository.TransactionManager
 import com.moneromerchant.pos.data.repository.TransactionResult
 import com.moneromerchant.pos.shared.DataResult
+import com.moneromerchant.pos.ui.PaymentCheckout
 import com.moneromerchant.pos.ui.PaymentEntry
 import com.moneromerchant.pos.ui.PaymentSuccess
 import java.math.BigDecimal
@@ -48,7 +50,7 @@ class PaymentCheckoutViewModel @Inject constructor(
 
     fun navigateBack() {
         stopReceive()
-        navController?.navigate(PaymentEntry)
+        navController?.popBackStack<PaymentEntry>(inclusive = false)
     }
 
     var paymentValue by mutableStateOf(0.0)
@@ -65,7 +67,6 @@ class PaymentCheckoutViewModel @Inject constructor(
 
     init {
         fetchExchangeRates()
-        startObservingPaymentStatus()
     }
 
     fun updatePaymentValue(value: Double) {
@@ -138,6 +139,7 @@ class PaymentCheckoutViewModel @Inject constructor(
                     qrCodeUri = result.qrCodeUri
                     hceRepository.updateUri(result.qrCodeUri)
                     Log.i(logTag, "Transaction created: ${result.transactionId}")
+                    startObservingPaymentStatus(result.transactionId)
                 }
             }
             createTransactionJob = null
@@ -165,29 +167,22 @@ class PaymentCheckoutViewModel @Inject constructor(
         }
     }
 
-    private fun startObservingPaymentStatus() {
+    private fun startObservingPaymentStatus(transactionId: Int) {
         observePaymentJob?.cancel()
 
         observePaymentJob = viewModelScope.launch {
-            transactionManager.acceptedTransaction.collect { accepted ->
-                if (accepted != null) {
-                    // Only navigate if we're still on the PaymentCheckout screen
-                    val currentRoute = navController?.currentBackStackEntry?.destination?.route
-
-                    Log.d(logTag, "Payment accepted!")
-
-                    if (currentRoute?.contains("PaymentCheckout/{fiatAmount}/{primaryFiatCurrency}") == true) {
-                        navigateToPaymentSuccess(transactionManager.toPaymentSuccess(accepted))
-                    } else {
-                        Log.d(logTag, "Not navigating as user left PaymentCheckout screen")
-                    }
-                }
-            }
+            val accepted = transactionManager.acceptedTransaction
+                .filterNotNull()
+                .first { it.transactionId == transactionId }
+            Log.d(logTag, "Payment accepted!")
+            navigateToPaymentSuccess(transactionManager.toPaymentSuccess(accepted))
         }
     }
 
     fun navigateToPaymentSuccess(paymentSuccess: PaymentSuccess) {
-        navController?.navigate(paymentSuccess)
+        navController?.navigate(paymentSuccess) {
+            popUpTo<PaymentCheckout> { inclusive = true }
+        }
     }
 
     fun generateQRCode(text: String, width: Int, height: Int, margin: Int, color: Int, background: Int): Bitmap {

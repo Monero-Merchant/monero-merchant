@@ -2,6 +2,8 @@ package com.moneromerchant.pos.data.repository
 
 import android.net.Uri
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import com.moneromerchant.pos.data.remote.backend.model.BackendCreateTransactionRequest
@@ -41,8 +43,7 @@ class TransactionManager @Inject constructor(
         // Clear the payment on logout
         coroutineScope.launch {
             authRepository.isLoggedIn().distinctUntilChanged().filter { !it }.collect {
-                backendRepository.stopObservingTransactionUpdates()
-                clearCurrentTransaction()
+                abandonCurrentTransaction()
                 clearAcceptedTransaction()
             }
         }
@@ -82,6 +83,8 @@ class TransactionManager @Inject constructor(
                 TransactionResult.Error(response.message)
             }
             is DataResult.Success -> {
+                // Checkout may have been left while the request was in flight
+                currentCoroutineContext().ensureActive()
                 backendRepository.observeCurrentTransactionUpdates(response.data.id)
 
                 registerActiveTransaction(
@@ -120,6 +123,12 @@ class TransactionManager @Inject constructor(
 
     fun clearCurrentTransaction() {
         _currentTransaction.value = null
+    }
+
+    // Stops watching the current payment. The backend still records it if it is paid later.
+    fun abandonCurrentTransaction() {
+        backendRepository.stopObservingTransactionUpdates()
+        clearCurrentTransaction()
     }
 
     fun clearAcceptedTransaction() {
